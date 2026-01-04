@@ -4,7 +4,7 @@
 
 ## Demo 
 
-[![demo](https://asciinema.org/a/6lKTjS45GDbXvirE89OSa5aDT.png)](https://asciinema.org/a/6lKTjS45GDbXvirE89OSa5aDT?autoplay=1)
+[![demo](https://asciinema.org/a/6lKTjS45GDbXvirE89OSa5aDT.svg)](https://asciinema.org/a/6lKTjS45GDbXvirE89OSa5aDT?autoplay=1)
 
 > **Note**: All the keybinds shown are defined in the `blz` config, and fully customizable.
 
@@ -29,6 +29,7 @@ For example, maybe you want to be able to use `Shift+Alt+B` to run `cargo build`
 ### Future work
 
 - [ ] Improve macOS support (please see the [issue](/../../issues/1)). 
+  - It should work fine on macOS (it has been tested briefly), but I'm in no position to guarantee this - especially for different terminal emulators. 
 - [ ] Support other shells, such as `fish`.
 
 ## Try it out
@@ -37,7 +38,6 @@ You can try out `blaze-keys` without installing it, by using the Docker image:
 
 ```bash
 docker run --cap-drop=ALL --security-opt=no-new-privileges -it enhancedprimate/blaze-keys:latest
-
 # Or with podman:
 podman run --cap-drop=ALL --security-opt=no-new-privileges -it docker.io/enhancedprimate/blaze-keys:latest
 ```
@@ -61,12 +61,12 @@ podman run --cap-drop=ALL --security-opt=no-new-privileges -it docker.io/enhance
 
 ### Download 'blz'
 
-`blz` is a single executable file, which you can download from the [release page](../../releases). Make sure it's on your `PATH`.
+`blz` is a single executable file in a tarball, which you can download from the [release page](../../releases). Extract `blz` from the tarball and make sure it's on your `PATH`.
 
 You can alternatively install with `cargo` (Rust `1.88` or newer):
 
 ```bash
-cargo install --locked --git git@github.com:AbstruseArchaeoindris/blaze-keys.git
+cargo install --locked --git https://github.com/enhanced-primate/blaze-keys.git
 ```
 
 ### Update .zshrc
