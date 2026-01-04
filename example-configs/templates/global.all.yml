@@ -1,0 +1,197 @@
+## This is the global config, which is prepopulated with some keybinds. The commented lines below can help you see how to configure it.
+#
+# ⚠️  "Alt-" shortcuts are case-sensitive! "Alt-b" and "Alt-B" are different, i.e. 'Alt-B' is actually 'Shift+Alt+b'.
+
+global:
+  # Keybinds are not behind a leader key.
+  keybinds:
+    - key: "Alt-p"
+      zle: push-line # To bind to a Zsh builtin, use the `zle` value.
+    - key: "Alt-l"
+      command: "ls -lah"
+    - key: "Ctrl-G"
+      command: "!!^M"
+    - key: "Alt-g" # Caution: the letter in 'Alt' combos is case sensitive, so it determines whether Shift is required.
+      command: "!-2^M"
+    - key: "F1" # Function keys might not work, depending on terminal/platform. 
+      command: "git status"
+    - key: "F2"
+      command: "git log"
+
+  ## You can have any number of leader keys. Each one has a tree of combos beneath it.
+  leader_keys:
+    # This is an example of how you might have a leader key collection which helps you to combine commands and aliases.
+    #
+    # If you wanted to run `docker pull localhost:5000/backend`, you could invoke 'docker pull'
+    # from Leader1 in 'abbr' mode and then 'localhost:5000/backend' from Leader0 in 'exec' mode.
+    - name: Leader0
+      exec_mode: "Ctrl-o"
+      abbr_mode: "Alt-o"
+      combos: |
+        -- My docker images which I often use
+        ib = localhost:5000/backend
+        if = localhost:5000/frontend
+
+    # The main leader key collection with commands.
+    - name: Leader1
+      exec_mode: "Ctrl-s"
+      abbr_mode: "Alt-s"
+      combos: |
+        b = fg
+
+        -- You can have nested modifier combos. This means that pressing Ctrl-S twice
+        -- (once to trigger blz and once to trigger the shortcut below) will run 'fg'.
+        <Ctrl-s> = fg
+
+        -- zsh builtins
+        zp = zle push-line
+        zc = zle clear-screen
+        zg = zle beginning-of-line
+        zb = zle backward-kill-word
+        zk = zle kill-word
+
+        -- git 
+        ga = git add
+        gaa = git add -A
+        gau = git add -u
+        gs = git status
+        gc = git checkout
+        gco = git commit
+        gca = git commit -a
+        gam = git commit --amend
+        gC = git cherry-pick
+        gamn = git commit --amend --no-edit
+        gcam = git commit -am
+        gcom = git commit -m
+        gcf = git commit --fixup HEAD
+        gcaf = git commit -a --fixup HEAD
+        gcl = git checkout -
+        gcb = git checkout -b
+        g<Alt-c> = git clone
+        gf = git fetch
+        gft = git fetch --tags
+        g<Alt-c>g = git config
+        g<Alt-c>G = git config --global
+        gl = git log
+        glo = git log --oneline
+        gd = git diff
+        gdc = git diff --cached
+        gm = git merge
+        g<Ctrl-r> = git restore
+        g<Ctrl-r>s = git restore --staged
+        gR = git reset
+        gRs = git reset --soft
+        gRh = git reset --hard
+        gS = git stash
+        gSp = git stash pop
+        gSa = git stash apply
+        gp = git push
+        gpf = git push --force-with-lease
+        gpF = git push --force
+        gpt = git push --tags
+        gaw = git commit -am wip
+        gawp = git commit -am wip && git push
+        gL = git pull
+        gLr = git pull --rebase
+        gB = git branch
+        gBm = git branch -m
+        gr = git rebase
+        gri = git rebase -i
+        gt = git tag
+        gtd = git tag -d
+        gv = git show
+        gw = git worktree
+        gwa = git worktree add
+        gwl = git worktree list
+        gwr = git worktree remove
+        gwp = git worktree prune
+        g<Alt-r> = git remote
+        g<Alt-r>a = git remote add
+        g<Alt-r>u = git remote set-url
+        g<Alt-r>v = git remote remove
+        g<Alt-r>uo = git remote set-url origin
+
+        -- cargo 
+        cc = cargo check
+        cC = cargo check --all-targets
+        cb = cargo build
+        cB = cargo build --release
+        cr = cargo run
+        cR = cargo run --release
+        ct = cargo test
+        cT = cargo test --release
+        cx = cargo fix
+        cxa = cargo fix --allow-dirty --all-targets
+        cf = cargo fmt
+        cF = cargo fmt --all
+        cn = cargo nextest
+
+        m = make -j`nproc`
+        mc = make
+
+        duH = du -ah
+        duh = du -ah --max-depth 1
+
+        l = ls -lah
+        lt = ls -lathr
+
+        -- docker 
+        dp = docker ps
+        ds = docker stats
+        dsn = docker stats --no-stream
+        dr = docker run
+        dri = docker run -it
+        dx = docker exec
+        dxi = docker exec -it
+        dL = docker pull
+        dP = docker push
+        di = docker inspect
+        do = docker save
+        drm = docker rm
+        dc = docker compose
+        dcu = docker compose up
+        dcud = docker compose up -d
+        dcr = docker compose restart
+        dcd = docker compose down
+        dcdv = docker compose down -V
+
+# Profiles define a set of keybindings specific to a type of project.
+# They can activate automatically in directories which contain a glob
+# pattern, or directories within a defined parent. Alternatively, a local
+# .blz.yml file can inherit the profile to bring in its keybindings.
+profiles:
+  - name: C++
+    conditions:
+      # Only activate in any directory underneath "~/projects/cpp/", or if a makefile is present.
+      - within: "~/projects/cpp/"
+      - glob: "makefile"
+    keybinds:
+      - key: "Alt-b"
+        command: "make -j`nproc`"
+
+  - name: Python
+    conditions:
+      # Only activate if 'Cargo.toml' exists in the current working directory.
+      - glob: "pyproject.toml"
+    keybinds:
+      - key: "Alt-b"
+        command: "uv build"
+
+  - name: Rust
+    conditions:
+      # Only activate if 'Cargo.toml' exists in the current working directory.
+      - glob: "Cargo.toml"
+    keybinds:
+      - key: "alt-C"  # Note: requires shift key (due to capital C).
+        command: "cargo check"
+      - key: "Alt-b"
+        command: "cargo build"
+      - key: "alt-x"
+        command: "cargo run"
+      - key: "F9"
+        command: "cargo build"
+      - key: "F10"
+        command: "cargo run"
+      - key: "^[Y"
+        command: "cargo fmt"
+        raw: true  # Using 'raw' allows you to set the raw keybind, exactly as it would be written in a 'bindkey' command. 

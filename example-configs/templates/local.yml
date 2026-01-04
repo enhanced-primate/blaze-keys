@@ -1,0 +1,24 @@
+## This is a local config. The commented lines below can help you see how to configure it.
+
+## You can inherit a profile from the global config, to share between similar projects.
+# inherits:
+#   - Rust
+
+## And you can add your own keybinds for this directory only.
+# keybinds:
+#   - key: "Ctrl-g"
+#     command: "!!^M"   # Run the last command.
+#   - key: "Alt-C"
+#     command: "cargo check"
+#   - key: "F9"
+#     command: "cargo build"
+#   - key: "F10"
+#     command: "cargo run"
+#   - key: "F1"
+#     command: "git status"
+#   - key: "F2"
+#     command: "git log"
+#   - key: "Ctrl-y"
+#     command: "echo test local config"
+
+## You can't currently add leader key combos in a local config.

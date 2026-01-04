@@ -1,0 +1,84 @@
+## This is the global config, which is prepopulated with some keybinds. The commented lines below can help you see how to configure it.
+#
+# ⚠️  "Alt-" shortcuts are case-sensitive! "Alt-b" and "Alt-B" are different, i.e. 'Alt-B' is actually 'Shift+Alt+b'.
+
+global:
+  # Keybinds are not behind a leader key.
+  keybinds:
+    - key: "Alt-p"
+      zle: push-line # To bind to a Zsh builtin, use the `zle` key.
+    - key: "Ctrl-G"
+      command: "!!^M"  # You can add '^M' to simulate an Enter/Return press. 
+    - key: "Alt-g" # Caution: the letter in 'Alt' combos is case sensitive, so it determines whether Shift is required.
+      command: "!-2^M"
+    - key: "F1"  # Function keys may not work, depending on platform/terminal.
+      command: "git status"
+
+  ## You can have any number of leader keys. Each one has a tree of combos beneath it.
+  leader_keys:
+  
+    # The main leader key collection with commands. You might want to add another, to deconflict
+    # or to have a set of postfix aliases etc.
+    - name: Leader1
+      exec_mode: "Ctrl-s"
+      abbr_mode: "Alt-s"
+      combos: |
+        b = fg
+
+        -- You can have nested modifier combos. This means that pressing Ctrl-S twice
+        -- (once to trigger blz and once to trigger the shortcut below) will run 'fg'.
+        <Ctrl-s> = fg
+
+        -- zsh builtins
+        zp = zle push-line
+        zc = zle clear-screen
+
+        -- git 
+        ga = git add
+        gaa = git add -A
+        gau = git add -u
+        gs = git status
+        gco = git commit
+        gca = git commit -a
+        gam = git commit --amend
+        gC = git cherry-pick
+        gamn = git commit --amend --no-edit
+        gcam = git commit -am
+        gcom = git commit -m
+        gcf = git commit --fixup HEAD
+        gcaf = git commit -a --fixup HEAD
+        gc = git checkout
+        gcl = git checkout -
+        gcb = git checkout -b
+        gf = git fetch
+        gft = git fetch --tags
+        g<Alt-c>g = git config
+        g<Alt-c>G = git config --global
+        gl = git log
+        glo = git log --oneline
+        gd = git diff
+        gdc = git diff --cached
+        gSp = git stash pop
+        gSa = git stash apply
+        gp = git push
+        gpt = git push --tags
+        gL = git pull
+        gLr = git pull --rebase
+
+        -- other utils
+        duH = du -ah
+        duh = du -ah --max-depth 1
+
+# Profiles define a set of keybindings specific to a type of project.
+# They can activate automatically in directories which contain a glob
+# pattern, or directories within a defined parent. Alternatively, a local
+# .blz.yml file can inherit the profile to bring in its keybindings.
+profiles:
+  - name: C++
+    conditions:
+      # Only activate in any directory underneath "~/projects/cpp/", or if a makefile is present.
+      - within: "~/projects/cpp/"
+      - glob: "makefile"
+    keybinds:
+      - key: "Alt-b"
+        command: "make -j`nproc`"

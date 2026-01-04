@@ -1,0 +1,142 @@
+name: Release
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - '[0-9]+.*' # Triggers only on version tags
+
+jobs:
+  versioning:
+    name: "Calculate version information"
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get the release version from the tag
+        id: set
+        if: env.VERSION == ''
+        run: |
+          echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          cat $GITHUB_ENV
+
+      - name: Show the version
+        run: |
+          echo "version is: $VERSION"
+
+      - name: Check that tag version and Cargo.toml version are the same
+        shell: bash
+        run: |
+          if ! grep -q "version = \"$VERSION\"" Cargo.toml; then
+            echo "version does not match Cargo.toml" >&2
+            exit 1
+          fi
+      
+    
+  create_docker_image:
+    runs-on: ubuntu-latest
+    needs:
+      - "versioning"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_WRITE_TOKEN }}
+
+      - name: Build and push Docker image
+        run: |
+          version="${{ needs.versioning.outputs.version }}"
+          echo "Docker image tag: ${version}"
+
+          docker build -t "${{ secrets.DOCKER_USERNAME }}/blaze-keys:${version}" -t "${{ secrets.DOCKER_USERNAME }}/blaze-keys:latest" .
+          docker push "${{ secrets.DOCKER_USERNAME }}/blaze-keys:${version}"
+          docker push "${{ secrets.DOCKER_USERNAME }}/blaze-keys:latest"
+
+  build-and-upload:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    needs: ["versioning"]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            code-target: x86_64-unknown-linux-gnu
+          
+          # macOS x86_64
+          - os: macos-15-intel 
+            target: x86_64-apple-darwin
+            code-target: x86_64-apple-darwin
+
+          # macOS ARM64
+          - os: macos-latest 
+            target: aarch64-apple-darwin
+            code-target: aarch64-apple-darwin
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.code-target }}
+
+      - name: Build binary
+        run: cargo build --release --target ${{ matrix.code-target }}
+
+      # Prepare the asset name (e.g., myapp-v1.0.0-x86_64-linux.tar.gz)
+      - name: Package and Calculate Checksum
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          REF_NAME: ${{ github.ref_name }} # e.g., v1.0.0
+        run: |
+          # 1. Determine binary name (replace 'my-app' with your actual crate name)
+          BIN_NAME="blz"
+          
+          # 2. Create a unique name for the release asset
+          ASSET_NAME="$BIN_NAME-$REF_NAME-$TARGET"
+          
+          # 3. Create a temporary directory for packing
+          mkdir "$ASSET_NAME"
+          
+          # 4. Copy the binary and strip it (if on Linux) to reduce size
+          cp "target/$TARGET/release/$BIN_NAME" "$ASSET_NAME/"
+          if [[ "$runner.os" == "Linux" ]]; then
+            strip "$ASSET_NAME/$BIN_NAME"
+          fi
+          
+          # 5. Compress the directory
+          tar czf "$ASSET_NAME.tar.gz" -C "$ASSET_NAME" .
+          
+          # 6. Generate SHA-256 Checksum
+          if [[ "$runner.os" == "macOS" ]]; then
+            shasum -a 256 "$ASSET_NAME.tar.gz" > "$ASSET_NAME.tar.gz.sha256"
+          else
+            sha256sum "$ASSET_NAME.tar.gz" > "$ASSET_NAME.tar.gz.sha256"
+          fi
+          
+          # 7. Output the filenames for the next step
+          echo "ASSET=$ASSET_NAME.tar.gz" >> $GITHUB_ENV
+          echo "CHECKSUM=$ASSET_NAME.tar.gz.sha256" >> $GITHUB_ENV
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            ${{ env.ASSET }}
+            ${{ env.CHECKSUM }}

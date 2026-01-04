@@ -1,0 +1,52 @@
+## This is the global config, which is prepopulated with some keybinds. The commented lines below can help you see how to configure it.
+#
+# ⚠️  "Alt-" shortcuts are case-sensitive! "Alt-b" and "Alt-B" are different, i.e. 'Alt-B' is actually 'Shift+Alt+b'.
+
+global:
+  # Keybinds are not behind a leader key.
+  keybinds: []  # WARNING: Remove the '[]' here to add keybinds below.
+    # - key: "Alt-p"
+    #   zle: push-line # To bind to a Zsh builtin, use the `zle` key.
+    # - key: "Ctrl-G"
+    #   command: "!!^M"  # You can add '^M' to simulate an Enter/Return press. 
+    # - key: "Alt-g" # Caution: the letter in 'Alt' combos is case sensitive, so it determines whether Shift is required.
+    #   command: "!-2^M"
+    # - key: "F1"  # Function keys may not work, depending on platform/terminal.
+    #   command: "git status"
+
+  ## You can have any number of leader keys. Each one has a tree of combos beneath it.
+  leader_keys:
+    # The main leader key collection with commands. You might want to add another, to deconflict
+    # or to have a set of postfix aliases etc.
+    - name: Leader1
+      exec_mode: "Ctrl-s"
+      abbr_mode: "Alt-s"
+      combos: |
+        -- -- Lines in this section are commented out with two leading dashes ('--').
+
+        -- -- You can have nested modifier combos. This means that pressing Ctrl-S twice
+        -- -- (once to trigger blz and once to trigger the shortcut below) will run 'fg'.
+        -- <Ctrl-s> = fg
+
+        -- -- zsh builtins
+        -- zp = zle push-line
+
+        -- -- git 
+        -- ga = git add
+        -- gaa = git add -A
+        -- gau = git add -u
+
+# # Profiles define a set of keybindings specific to a type of project.
+# # They can activate automatically in directories which contain a glob
+# # pattern, or directories within a defined parent. Alternatively, a local
+# # .blz.yml file can inherit the profile to bring in its keybindings.
+# #      
+# profiles:
+#   - name: C++
+#     conditions:
+#       # Only activate in any directory underneath "~/projects/cpp/", or if a makefile is present.
+#       - within: "~/projects/cpp/"
+#       - glob: "makefile"
+#     keybinds: 
+#       - key: "Alt-b"
+#         command: "make -j`nproc`"
