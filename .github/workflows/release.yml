@@ -70,10 +70,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux x86_64
+          # Linux x86_64 (GNU)
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             code-target: x86_64-unknown-linux-gnu
+
+          # Linux x86_64 (musl)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            code-target: x86_64-unknown-linux-musl
           
           # macOS x86_64
           - os: macos-15-intel 
@@ -93,6 +98,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.code-target }}
+
+      - name: Install musl
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+        if: matrix.target == 'x86_64-unknown-linux-musl'
 
       - name: Build binary
         run: cargo build --release --target ${{ matrix.code-target }}
