@@ -8,7 +8,7 @@ use std::io::Write;
 use termion::event::Key;
 use termion::input::TermRead;
 
-use crate::nodes::{CharWithModifiers, Node};
+use crate::nodes::{CharWithModifiers, CharWithModifiersAndValidity, Node};
 
 trait TruncateWithEllipsis {
     fn ellipsis(&self, start: u16, max_len: u16) -> String;
@@ -99,13 +99,40 @@ fn test_truncate_utf8() {
     assert_eq!("troy", "troy".ellipsis(0, 7));
 }
 
+trait CurrentKeys {
+    /// Remove all invalid sequences.
+    fn strip_invalid(&mut self);
+
+    /// Display in a format useful for the TUI.
+    fn display(&self) -> String;
+
+    /// Total length (in chars) of the sequences when displayed.
+    fn total_visual_length(&self) -> usize;
+}
+impl CurrentKeys for Vec<CharWithModifiersAndValidity> {
+    fn strip_invalid(&mut self) {
+        *self = self.iter().filter(|d| d.valid).copied().collect();
+    }
+
+    fn display(&self) -> String {
+        self.iter().map(|c| c.char.str_short()).join("")
+    }
+
+    fn total_visual_length(&self) -> usize {
+        self.iter().map(|c| c.char.visual_length()).sum()
+    }
+}
+
 pub struct Tui<'a> {
-    current_text: Vec<CharWithModifiers>,
+    key_buffer: Vec<CharWithModifiersAndValidity>,
     term: termion::screen::AlternateScreen<termion::raw::RawTerminal<File>>,
     tmpfile: String,
     node: &'a Node,
     parents: Vec<&'a Node>,
-    bad_count: usize,
+    /// Number of invalid keys.
+    invalid_count: usize,
+    /// Whether an invalid sequence is currently entered.
+    invalid: bool,
     abbr: bool,
 }
 
@@ -117,12 +144,13 @@ impl<'a> Tui<'a> {
         abbr: bool,
     ) -> Self {
         Tui {
-            current_text: vec![],
+            key_buffer: vec![],
             term,
             tmpfile,
             node,
             parents: vec![],
-            bad_count: 0,
+            invalid_count: 0,
+            invalid: false,
             abbr,
         }
     }
@@ -147,15 +175,18 @@ impl<'a> Tui<'a> {
                     break;
                 }
                 Key::Backspace => {
-                    if self.current_text.is_empty() {
+                    if self.key_buffer.is_empty() {
                         continue;
                     }
-                    self.current_text.pop();
+                    let last = self.key_buffer.pop();
 
-                    if self.bad_count == 0 {
+                    if self.invalid_count == 0 {
                         self.node = self.parents.pop().unwrap();
                     }
-                    self.bad_count = self.bad_count.saturating_sub(1);
+                    if let Some(l) = last {
+                        self.invalid_count =
+                            self.invalid_count.saturating_sub(l.char.visual_length());
+                    }
                     self.write();
                 }
                 Key::Ctrl(any) => {
@@ -171,7 +202,12 @@ impl<'a> Tui<'a> {
             }
 
             if let Some(key) = key {
-                if let Some(node) = self.node.children.get(&key) {
+                let valid = if let Some(node) = self.node.children.get(&key) {
+                    if self.invalid {
+                        self.invalid_count = 0;
+                        self.invalid = false;
+                        self.key_buffer.strip_invalid();
+                    }
                     self.parents.push(self.node);
                     self.node = node;
 
@@ -179,11 +215,15 @@ impl<'a> Tui<'a> {
                         command = self.node.command.as_ref();
                         break;
                     }
+                    true
                 } else {
-                    self.bad_count += 1;
-                }
+                    self.invalid_count += key.visual_length();
+                    self.invalid = true;
+                    false
+                };
 
-                self.current_text.push(key);
+                self.key_buffer
+                    .push(CharWithModifiersAndValidity { char: key, valid });
                 self.write();
             }
         }
@@ -217,17 +257,10 @@ impl<'a> Tui<'a> {
 
         let space_char: CharWithModifiers = ' '.into();
 
-        let curr: String = self.current_text.iter().map(|c| c.str_short()).join("");
-        let (normal_text, red_text) = curr.split_at(
-            self.current_text
-                .iter()
-                .map(|c| match c {
-                    CharWithModifiers::Unmodified(_) => 1,
-                    _ => 5,
-                })
-                .sum::<usize>()
-                - self.bad_count,
-        );
+        let current: String = self.key_buffer.display();
+
+        let (normal_text, red_text) =
+            current.split_at(self.key_buffer.total_visual_length() - self.invalid_count);
 
         // Draw the prompt with the current text.
         write!(
@@ -236,7 +269,7 @@ impl<'a> Tui<'a> {
             termion::cursor::Goto(1, width_first),
             termion::clear::BeforeCursor,
             termion::cursor::Goto(1, 1),
-            if !self.current_text.is_empty() {
+            if !self.key_buffer.is_empty() {
                 normal_text
             } else {
                 "<waiting>"

@@ -23,6 +23,12 @@ pub enum CharWithModifiers {
     Unmodified(char),
 }
 
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+pub struct CharWithModifiersAndValidity {
+    pub char: CharWithModifiers,
+    pub valid: bool,
+}
+
 impl Deref for CharWithModifiers {
     type Target = char;
 
@@ -44,6 +50,14 @@ impl CharWithModifiers {
             Self::Unmodified(c) => format!("{c}"),
         }
     }
+
+    /// The length of the char when represented in the TUI.
+    pub fn visual_length(&self) -> usize {
+        match self {
+            Self::Ctrl(_) | Self::Alt(_) => 5,
+            Self::Unmodified(_) => 1,
+        }
+    }
 }
 
 impl From<char> for CharWithModifiers {
@@ -60,9 +74,9 @@ impl Node {
             && let Some(ref conf) = global.global
             && let Some(ref leaderkeys) = conf.leader_keys
         {
-            for _leader in leaderkeys {
-                if _leader.sanitized_name() == leader_chosen {
-                    for line in _leader.combos.lines() {
+            for leader_key in leaderkeys {
+                if leader_key.sanitized_name() == leader_chosen {
+                    for line in leader_key.combos.lines() {
                         match keys::parse_combo(line) {
                             Ok(Some((combo, command))) => {
                                 debug!("Found leader combo: {combo} -> {command}");
