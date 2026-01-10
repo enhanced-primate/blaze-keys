@@ -1,6 +1,6 @@
 extern crate termion;
 
-use colored::{Color, ColoredString, Colorize};
+use colored::{Color, Colorize};
 use itertools::Itertools;
 use std::cmp::Ordering;
 use std::fs::File;
@@ -99,7 +99,7 @@ fn test_truncate_utf8() {
     assert_eq!("troy", "troy".ellipsis(0, 7));
 }
 
-trait CurrentKeys {
+trait KeyBuffer {
     /// Remove all invalid sequences.
     fn strip_invalid(&mut self);
 
@@ -109,7 +109,7 @@ trait CurrentKeys {
     /// Total length (in chars) of the sequences when displayed.
     fn total_visual_length(&self) -> usize;
 }
-impl CurrentKeys for Vec<CharWithModifiersAndValidity> {
+impl KeyBuffer for Vec<CharWithModifiersAndValidity> {
     fn strip_invalid(&mut self) {
         *self = self.iter().filter(|d| d.valid).copied().collect();
     }
@@ -134,6 +134,12 @@ pub struct Tui<'a> {
     /// Whether an invalid sequence is currently entered.
     invalid: bool,
     abbr: bool,
+}
+
+struct NodeMetadata<'a> {
+    node: &'a Node,
+    pos: (u16, u16),
+    length: u16,
 }
 
 impl<'a> Tui<'a> {
@@ -190,10 +196,10 @@ impl<'a> Tui<'a> {
                     self.write();
                 }
                 Key::Ctrl(any) => {
-                    key = Some(CharWithModifiers::Ctrl(*any));
+                    key = modifier_or_fallback(CharWithModifiers::Ctrl(*any), &self.node.children);
                 }
                 Key::Alt(any) => {
-                    key = Some(CharWithModifiers::Alt(*any));
+                    key = modifier_or_fallback(CharWithModifiers::Alt(*any), &self.node.children);
                 }
                 Key::Char(any) => {
                     key = Some((*any).into());
@@ -274,7 +280,7 @@ impl<'a> Tui<'a> {
             } else {
                 "<waiting>"
             },
-            ColoredString::from(red_text).red(),
+            red_text.red(),
         )
         .unwrap();
 
@@ -296,11 +302,6 @@ impl<'a> Tui<'a> {
         let mut values = self.node.children.clone();
         values.insert(' '.into(), self.node.clone());
 
-        struct NodeMeta<'a> {
-            node: &'a Node,
-            pos: (u16, u16),
-            length: u16,
-        }
         let mut nodes_drawn = vec![];
 
         // Draw the commands available.
@@ -324,7 +325,7 @@ impl<'a> Tui<'a> {
             let only_subcommands = CharWithModifiers::Unmodified(' ') == **key;
 
             if !only_subcommands {
-                nodes_drawn.push(NodeMeta {
+                nodes_drawn.push(NodeMetadata {
                     pos: (width_first, index + 1),
                     node: value,
                     length: command.len() as u16 + 6,
@@ -347,15 +348,12 @@ impl<'a> Tui<'a> {
                 termion::clear::UntilNewline,
                 spacing,
                 match final_no_children {
-                    true => ColoredString::from(FINAL)
-                        .on_bright_blue()
-                        .white()
-                        .to_string(),
+                    true => FINAL.on_bright_blue().white().to_string(),
                     false => "".into(),
                 },
                 match only_subcommands {
-                    true => ColoredString::from("<space>".to_string()).green(),
-                    _ => ColoredString::from(key.str_short()).green(),
+                    true => "<space>".to_string().green(),
+                    _ => key.str_short().green(),
                 },
                 command,
             )
@@ -375,7 +373,7 @@ impl<'a> Tui<'a> {
             )
             .unwrap();
 
-            let mut nodes_with_flat_children: Vec<(&NodeMeta, Vec<&Node>)> = nodes_drawn
+            let mut nodes_with_flat_children: Vec<(&NodeMetadata, Vec<&Node>)> = nodes_drawn
                 .iter()
                 .map(|it| {
                     let base = &it.node.command;
@@ -617,14 +615,14 @@ impl<'a> Tui<'a> {
                 self.term,
                 "{}{}",
                 termion::cursor::Goto(1, height + 12),
-                ColoredString::from("Help: Press a key marked in green to select").yellow()
+                "Help: Press a key marked in green to select".yellow()
             )
             .unwrap();
             write!(
                 self.term,
                 "{}{}",
                 termion::cursor::Goto(1, height + 13),
-                ColoredString::from("Help: Press Esc/Ctrl-c to cancel and exit").yellow(),
+                "Help: Press Esc/Ctrl-c to cancel and exit".yellow(),
             )
             .unwrap();
             write!(self.term, "{}", termion::cursor::Hide,).unwrap();
@@ -632,4 +630,25 @@ impl<'a> Tui<'a> {
 
         self.term.flush().unwrap();
     }
+}
+
+/// Returns the modifier key if the modifier is present as a valid option, but if not, and if the unmodified key is
+/// valid, returns the unmodified key.
+fn modifier_or_fallback(
+    key: CharWithModifiers,
+    children: &std::collections::HashMap<
+        CharWithModifiers,
+        Node,
+        std::hash::BuildHasherDefault<fnv::FnvHasher>,
+    >,
+) -> Option<CharWithModifiers> {
+    if !children.contains_key(&key) {
+        let unmodified = (*key).into();
+
+        if children.contains_key(&unmodified) {
+            return Some(unmodified);
+        }
+    }
+
+    Some(key)
 }
