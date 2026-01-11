@@ -32,6 +32,9 @@ global:
         ib = localhost:5000/backend
         if = localhost:5000/frontend
 
+        -- Git refs
+        om = origin/main
+
     # The main leader key collection with commands.
     - name: Leader1
       exec_mode: "Ctrl-s"

@@ -59,6 +59,8 @@ podman run --cap-drop=ALL --security-opt=no-new-privileges -it docker.io/enhance
 
 ## Quick start guide
 
+After completing the setup steps below, you can follow the brief [tutorial](./docs/tutorial.md).
+
 ### Download 'blz'
 
 `blz` is a single executable file in a tarball, which you can download from the [release page](../../releases). Extract `blz` from the tarball and make sure it's on your `PATH`.
@@ -82,7 +84,7 @@ source ~/.zshrc
 
 ### Configure global config
 
-Run `blz -g` to edit the global config (creating from template if not present). The repo includes an example which demonstrates many of the available features: [global.all.yml](./example-configs/templates/global.all.yml).
+Run `blz -g` to edit the global config (creating from template if not present). The repo includes an example which demonstrates many of the available features: [global.all.yml](./example-configs/templates/global.all.yml). I would suggest that you use the `all` config when prompted, then follow the [tutorial](./docs/tutorial.md) to familiarise yourself with the usage; then you can modify the config as you wish.  
 
 > **Warning**: After adding a new leader key to the global config, you need to `source ~/.zshrc` for the new keybinds to take effect.
 
