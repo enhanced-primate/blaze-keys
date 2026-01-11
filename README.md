@@ -30,7 +30,7 @@ For example, maybe you want to be able to use `Shift+Alt+B` to run `cargo build`
 
 - [ ] Improve macOS support (please see the [issue](/../../issues/1)). 
   - It should work fine on macOS (it has been tested briefly), but I'm in no position to guarantee this - especially for different terminal emulators. 
-- [ ] Support other shells, such as `fish`.
+- [ ] Support other shells, such as `fish` (please upvote the [issue](/../../issues/3) if you're interested).
 
 ## Try it out
 
