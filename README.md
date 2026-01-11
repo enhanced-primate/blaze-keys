@@ -32,17 +32,9 @@ For example, maybe you want to be able to use `Shift+Alt+B` to run `cargo build`
   - It should work fine on macOS (it has been tested briefly), but I'm in no position to guarantee this - especially for different terminal emulators. 
 - [ ] Support other shells, such as `fish` (please upvote the [issue](/../../issues/3) if you're interested).
 
-## Try it out
+## Try it out with Docker?
 
-You can try out `blaze-keys` without installing it, by using the Docker image:
-
-```bash
-docker run --cap-drop=ALL --security-opt=no-new-privileges -it enhancedprimate/blaze-keys:latest
-# Or with podman:
-podman run --cap-drop=ALL --security-opt=no-new-privileges -it docker.io/enhancedprimate/blaze-keys:latest
-```
-
-> ⚠️ **Warning**: Depending on your terminal emulator and platform, some or all of the hotkeys in the tutorial might not work when running via Docker/podman. 
+You can try out `blaze-keys` without installing it, by using the [Docker image](./docs/docker.md). 
 
 ## Configuration
 
@@ -68,7 +60,7 @@ After completing the setup steps below, you can follow the brief [tutorial](./do
 You can alternatively install with `cargo` (Rust `1.88` or newer):
 
 ```bash
-cargo install --locked --git https://github.com/enhanced-primate/blaze-keys.git
+cargo install --locked --bin blz --git https://github.com/enhanced-primate/blaze-keys.git
 ```
 
 ### Update .zshrc
