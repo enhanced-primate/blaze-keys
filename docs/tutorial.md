@@ -63,7 +63,74 @@ You should find that `git checkout origin/main` has been executed. You can also 
 
 ## Top-level keybinds 
 
-TODO. 
+Top-level keybinds are hotkeys that you can press in the terminal, to execute a command. They can be set to change automatically as you move between projects. 
+
+Top-level keybinds can be defined in three places: 
+
+1. Globally, in the `global.keybinds` section of the global config. These keybinds are always set, and don't change. 
+2. In the `profiles` section of the global config. These keybinds are active only when one of their `conditions` is fulfilled. 
+3. In the local config, which may exist at `.blz.yml` in any directory. 
+
+### Global keybinds
+
+In the `all` config, you will see: 
+
+```yml
+global:
+  # Keybinds are not behind a leader key.
+  keybinds:
+    - key: "Alt-p"
+      zle: push-line # To bind to a Zsh builtin, use the `zle` value.
+    - key: "Alt-l"
+      command: "ls -lah"
+    ...
+```
+
+You can try pressing `Alt-l` to run `ls -lah`. You can also bind `zle` builtins here, as seen in the example (they also work in leader-key combos).
+
+### Profile-specific keybinds
+
+In the `all` config, you will see profiles, such as: 
+
+```yml
+profiles:
+  - name: C++
+    conditions:
+      # Only activate in any directory underneath "~/projects/cpp/", or if a makefile is present.
+      - within: "~/projects/cpp/"
+      - glob: "makefile"
+    keybinds:
+      - key: "Alt-b"
+        command: "make -j`nproc`"
+  ...
+```
+
+Try creating a directory with `mkdir tmp && touch tmp/makefile && cd tmp` and press `Alt-b`. It should run the `make` command from the profile. If you `cd` to a Rust project, `Alt-b` should then run `cargo build`.
+
+> **Tip**: Profiles are evaluated when you `cd`. You can use `cd .` if you need to re-evaluate the profile conditions. 
+
+#### Local configs
+
+In any directory, you can run `blz -l` to create/edit a local config. This can inherit a profile from the global config, for example: 
+
+```yml
+# .blz.yml
+inherits:
+  - Rust
+```
+
+It can also define its own keybinds:
+
+```yml
+# .blz.yml
+keybinds:
+  - key: "Ctrl-g"
+    command: "!!^M"   # Run the last command.
+  - key: "Alt-C"
+    command: "cargo check"
+```
+
+After creating a local config, use `cd .` to refresh the keybindings.
 
 ## Next steps
 
