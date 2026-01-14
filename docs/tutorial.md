@@ -32,6 +32,10 @@ In the default config, the `exec` leader key is defined as `Ctrl-s`. Try running
 
 You should find `git status` has executed in your shell. You could now try running it again, as quickly as you can. 
 
+<img src="./assets/exec_git_status.gif" width="70%" />
+
+---
+
 Some commands may have subcommands; in this case, you need to press `Space` to select the non-subcommand. Try running `git log`:
 
 1. Press `Ctrl-s`.
@@ -48,6 +52,10 @@ In the default config, the `abbr` leader key is defined as `Alt-s`. Try expandin
 
 You should find that `git checkout` has expanded into your current line. You can now type any remaining parts and press Enter. 
 
+<img src="./assets/abbr_git_checkout.gif" width="70%" />
+
+---
+
 #### Composing commands with multiple invocations
 
 To get even faster, you can use multiple invocations of leader keys in one command. For example, you may often have to run `git checkout origin/main`. An effective way to optimise this is by putting `origin/main` behind a different leader key (or the same leader key, if you like). In the `all` template, `origin/main` is defined under leader key `Alt-o`.
@@ -60,6 +68,10 @@ To run `git checkout origin/main`, you can:
 4. Type `om` to trigger `origin/main`. 
 
 You should find that `git checkout origin/main` has been executed. You can also use `abbr` mode instead of `exec` mode for the second segment, if you don't want it to execute immediately. 
+
+<img src="./assets/compose_commands.gif" width="70%" />
+
+---
 
 ## Top-level keybinds 
 
