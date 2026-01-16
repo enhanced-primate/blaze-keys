@@ -106,39 +106,34 @@ jobs:
       - name: Build binary
         run: cargo build --release --target ${{ matrix.code-target }}
 
-      # Prepare the asset name (e.g., myapp-v1.0.0-x86_64-linux.tar.gz)
       - name: Package and Calculate Checksum
         shell: bash
         env:
           TARGET: ${{ matrix.target }}
-          REF_NAME: ${{ github.ref_name }} # e.g., v1.0.0
+          REF_NAME: ${{ github.ref_name }} 
         run: |
-          # 1. Determine binary name (replace 'my-app' with your actual crate name)
           BIN_NAME="blz"
           
-          # 2. Create a unique name for the release asset
+          # Create a unique name for the release asset
           ASSET_NAME="$BIN_NAME-$REF_NAME-$TARGET"
           
-          # 3. Create a temporary directory for packing
+          # Create a temporary directory for packing
           mkdir "$ASSET_NAME"
           
-          # 4. Copy the binary and strip it (if on Linux) to reduce size
+          # Copy the binary and strip it (if on Linux) to reduce size
           cp "target/$TARGET/release/$BIN_NAME" "$ASSET_NAME/"
           if [[ "$runner.os" == "Linux" ]]; then
             strip "$ASSET_NAME/$BIN_NAME"
           fi
           
-          # 5. Compress the directory
           tar czf "$ASSET_NAME.tar.gz" -C "$ASSET_NAME" .
           
-          # 6. Generate SHA-256 Checksum
           if [[ "$runner.os" == "macOS" ]]; then
             shasum -a 256 "$ASSET_NAME.tar.gz" > "$ASSET_NAME.tar.gz.sha256"
           else
             sha256sum "$ASSET_NAME.tar.gz" > "$ASSET_NAME.tar.gz.sha256"
           fi
           
-          # 7. Output the filenames for the next step
           echo "ASSET=$ASSET_NAME.tar.gz" >> $GITHUB_ENV
           echo "CHECKSUM=$ASSET_NAME.tar.gz.sha256" >> $GITHUB_ENV
 
