@@ -68,7 +68,7 @@ After completing the setup steps below, you can follow the brief [tutorial](./do
 You can alternatively install with `cargo` (Rust `1.88` or newer):
 
 ```bash
-cargo install --locked --git https://github.com/enhanced-primate/blaze-keys.git
+cargo install --locked --bin blz blaze-keys
 ```
 
 ### Update .zshrc
