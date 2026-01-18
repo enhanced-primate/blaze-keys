@@ -4,6 +4,7 @@ version = "0.2.1"
 edition = "2024"
 default-run = "blz"
 license = "MIT"
+categories = ["command-line-utilities"]
 description = "Zsh plugin for blazing fast Zsh commands, providing customizable leader-key combos and project-specific keybinds."
 repository = "https://github.com/enhanced-primate/blaze-keys"
 exclude = ["res", "docs"]
