@@ -69,7 +69,7 @@ pub fn check_leaders(leaders: &Option<&Vec<LeaderKeys>>) -> Result<()> {
     }
 }
 
-fn print_export_leaders(leaders: &Option<&Vec<LeaderKeys>>) {
+pub fn print_export_leaders(leaders: &Option<&Vec<LeaderKeys>>) {
     println!("export BLZ_LEADER_STATE='{}'", leaders_to_state(leaders));
 }
 

@@ -1,0 +1,33 @@
+# nushell
+
+config file at: ~/.config/nushell/config.nu
+
+## leader keys
+
+A leader trigger looks like:
+
+$env.config.keybindings ++= [
+    {
+      name: test_it
+      modifier: control
+      keycode: char_t
+      mode: emacs
+      event: {
+        send: executehostcommand,
+        cmd: "blz --porcelain-leader Leader1 --porcelain-tmp /tmp/tehunoei; commandline edit -A --insert (cat /tmp/tehunoei)"
+      }
+    }
+]
+
+## top level keybinds
+
+Will need to register a env_change hook:
+
+$env.config.hooks = {
+    env_change: {
+        PWD: [{|before, after| '$env.test = (blz -B)' }]
+    }
+}
+
+How do I make that update the $env in the current session? It seems like the env changes are scoped to the hook. 
+

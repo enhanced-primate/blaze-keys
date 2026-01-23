@@ -1,13 +1,18 @@
 #[cfg(debug_assertions)]
 mod dev;
 
-mod keys;
-
 extern crate termion;
 
-use blaze_keys::{CONFIG_FILE_NAME, keys::print_human_keys, nodes::Node, zsh_hook};
+use anyhow::{Result, anyhow};
+use blaze_keys::keys;
+use blaze_keys::keys::print_bindkey_zsh;
+use blaze_keys::yml::{self, GlobalConfig, LocalConfig};
+use blaze_keys::{CONFIG_FILE_NAME, keys::print_human_keys, nodes::Node, nu_hook, zsh_hook};
+use clap::Parser;
 use colored::Colorize;
 use flexi_logger::{FileSpec, LoggerHandle};
+use log::{debug, info};
+use std::path::{Path, PathBuf};
 use std::{
     env,
     fs::File,
@@ -17,15 +22,6 @@ use std::{
 };
 use termion::raw::IntoRawMode;
 use termion::screen::IntoAlternateScreen;
-
-use anyhow::{Result, anyhow};
-use log::{debug, info};
-use std::path::{Path, PathBuf};
-
-use blaze_keys::yml::{self, GlobalConfig, LocalConfig};
-use clap::Parser;
-
-use crate::keys::print_bindkey_zsh;
 
 const LOCAL_TEMPLATE: &str = include_str!("../example-configs/templates/local.yml");
 const GLOBAL_TEMPLATE: &str = include_str!("../example-configs/templates/global.all.yml");
@@ -97,6 +93,9 @@ struct Args {
         help = "Print a template to stdout. Interactively select if no name is provided."
     )]
     print_template: Option<Option<String>>,
+
+    #[clap(short, long, help = "Print the Nushell bindings.")]
+    nu_hook: bool,
 }
 
 fn parse_global_keybinds<T>(path: T) -> Option<Result<GlobalConfig>>
@@ -271,6 +270,10 @@ fn main() -> Result<(), anyhow::Error> {
 
     if args.zsh_hook {
         zsh_hook::print_zsh_hook(&global_binds.transpose()?);
+        return Ok(());
+    }
+    if args.nu_hook {
+        nu_hook::print_nu_hook(&global_binds.transpose()?)?;
         return Ok(());
     }
     let local_binds = parse_local_keybinds();

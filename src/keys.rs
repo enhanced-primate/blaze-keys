@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use crate::nodes::CharWithModifiers;
 use crate::yml::Keybind;
 use log::info;
 use once_cell::sync::Lazy;
@@ -39,8 +40,47 @@ pub enum KeyOrLeader {
     LeaderCombo(String),
 }
 
+pub struct NuKey {
+    pub modifier: Option<&'static str>,
+    pub char: char,
+}
+
 fn alt_starter_key() -> &'static str {
     "\\e"
+}
+
+impl From<CharWithModifiers> for NuKey {
+    fn from(value: CharWithModifiers) -> Self {
+        match value {
+            CharWithModifiers::Ctrl(char) => NuKey {
+                modifier: "ctrl".into(),
+                char,
+            },
+            CharWithModifiers::Alt(char) => NuKey {
+                modifier: "alt".into(),
+                char,
+            },
+            CharWithModifiers::Unmodified(char) => NuKey {
+                modifier: None,
+                char,
+            },
+        }
+    }
+}
+
+pub fn get_key_nu(key: &str) -> Option<NuKey> {
+    let modifier;
+
+    if let Some(f_alt) = REGEX_ALT.find(key) {
+        modifier = CharWithModifiers::Alt(key.split_at(f_alt.end()).1.chars().next().unwrap());
+    } else if let Some(f_ctrl) = REGEX_CTRL.find(key) {
+        modifier = CharWithModifiers::Ctrl(key.split_at(f_ctrl.end()).1.chars().next().unwrap());
+    } else {
+        eprintln!("Error: Must have a modifier key for leader keybinds");
+        return None;
+    }
+
+    Some(modifier.into())
 }
 
 pub fn get_key_zsh_representation(key: &str) -> Option<KeyOrLeader> {
