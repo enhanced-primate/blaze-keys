@@ -42,7 +42,7 @@ pub enum KeyOrLeader {
 
 pub struct NuKey {
     pub modifier: Option<&'static str>,
-    pub char: char,
+    pub char: String,
 }
 
 fn alt_starter_key() -> &'static str {
@@ -53,16 +53,16 @@ impl From<CharWithModifiers> for NuKey {
     fn from(value: CharWithModifiers) -> Self {
         match value {
             CharWithModifiers::Ctrl(char) => NuKey {
-                modifier: "ctrl".into(),
-                char,
+                modifier: "control".into(),
+                char: format!("char_{char}"),
             },
             CharWithModifiers::Alt(char) => NuKey {
                 modifier: "alt".into(),
-                char,
+                char: format!("char_{char}"),
             },
             CharWithModifiers::Unmodified(char) => NuKey {
                 modifier: None,
-                char,
+                char: format!("char_{char}"),
             },
         }
     }

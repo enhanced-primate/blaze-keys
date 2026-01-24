@@ -1,6 +1,6 @@
 use crate::{
-    keys::{self, KeyOrLeader, NuKey},
-    yml::{GlobalConfig, LeaderKeys},
+    keys::{self, NuKey},
+    yml::GlobalConfig,
 };
 use anyhow::Result;
 
@@ -8,7 +8,7 @@ use crate::zsh_hook;
 
 pub fn print_nu_hook(global: &Option<GlobalConfig>) -> Result<()> {
     if let Some(g) = global.as_ref().and_then(|g| g.global.as_ref()) {
-        zsh_hook::print_export_leaders(&g.leader_keys.as_ref());
+        // zsh_hook::print_export_leaders(&g.leader_keys.as_ref());
 
         if let Some(ref leaders) = g.leader_keys {
             if !leaders.is_empty() {
@@ -31,7 +31,7 @@ pub fn print_nu_hook(global: &Option<GlobalConfig>) -> Result<()> {
                         Some(m) => m,
                     };
                     let (flag, spacing, accept_flag) = match abbr {
-                        true => ("--porcelain-abbr ", " ", ""),
+                        true => ("--porcelain-abbr ", "commandline edit --insert ' ';", ""),
                         false => ("", "", "-A"),
                     };
 
@@ -39,21 +39,23 @@ pub fn print_nu_hook(global: &Option<GlobalConfig>) -> Result<()> {
                         "
 $env.config.keybindings ++= [
     {{
-      name: blz_{1}
-      modifier: {3}
-      keycode: {4}
+      name: blz_{0}
+      modifier: {2}
+      keycode: {3}
       mode: emacs
       event: {{
         send: executehostcommand,
-        cmd: \"blz --porcelain-leader {1} --porcelain-tmp {0}; commandline edit {2} --insert (cat {0})\"
-      }} }}
+        cmd: \"let tmpfile = (mktemp -p /tmp); blz --porcelain-leader {0} {5} --porcelain-tmp $tmpfile; commandline edit {1} --insert (cat $tmpfile);{4} rm $tmpfile\"
+      }} 
+    }}
 ]
 ",
-                        flag,
                         leader.sanitized_name(),
                         accept_flag,
                         modifier,
                         char,
+                        spacing,
+                        flag,
                     )
                 }
             }
