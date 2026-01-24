@@ -4,10 +4,10 @@ mod dev;
 extern crate termion;
 
 use anyhow::{Result, anyhow};
-use blaze_keys::keys;
 use blaze_keys::keys::print_bindkey_zsh;
 use blaze_keys::yml::{self, GlobalConfig, LocalConfig};
 use blaze_keys::{CONFIG_FILE_NAME, keys::print_human_keys, nodes::Node, nu_hook, zsh_hook};
+use blaze_keys::{SHELL, Shell, keys};
 use clap::Parser;
 use colored::Colorize;
 use flexi_logger::{FileSpec, LoggerHandle};
@@ -82,6 +82,12 @@ struct Args {
 
     #[clap(long)]
     porcelain_ignore_leader_state: bool,
+
+    #[clap(long)]
+    porcelain_print_leader_state: bool,
+
+    #[clap(long)]
+    porcelain_check_leader_state_then_exit: bool,
 
     #[cfg(debug_assertions)]
     #[clap(short = 's', long, help = "[development] Swap a config in or out.")]
@@ -203,6 +209,12 @@ fn main() -> Result<(), anyhow::Error> {
     let _logger = setup_logging();
     check_root();
 
+    if let Ok(shell) = std::env::var("BLZ_SHELL")
+        && shell.starts_with("nu")
+    {
+        *SHELL.lock().unwrap() = Shell::Nu;
+    }
+
     let hook = std::panic::take_hook();
     // If we panic during the TUI render, the message may be invisible to the user.
     // We write the error to a file instead.
@@ -291,8 +303,18 @@ fn main() -> Result<(), anyhow::Error> {
         None => &None,
     };
 
-    if !args.porcelain_ignore_leader_state {
+    if args.porcelain_print_leader_state {
+        zsh_hook::print_leader_state(ld);
+        return Ok(());
+    }
+    if !args.porcelain_ignore_leader_state && args.porcelain_leader.is_none()
+    /* No need to check when the leader key is set, because that means this leader key is up to date at least */
+    {
         zsh_hook::check_leaders(ld)?;
+
+        if args.porcelain_check_leader_state_then_exit {
+            return Ok(());
+        }
     }
 
     if let Some(leader) = args.porcelain_leader {

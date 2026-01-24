@@ -2,6 +2,7 @@ use anyhow::Result;
 use log::debug;
 
 use crate::{
+    SHELL, Shell,
     keys::{self, KeyOrLeader},
     yml::{GlobalConfig, LeaderKeys},
 };
@@ -46,16 +47,22 @@ pub fn leaders_to_state(leaders: &Option<&Vec<LeaderKeys>>) -> String {
     )
 }
 
+/// Checks if the leader key state from the env is up to date. Returs an error if not.
 pub fn check_leaders(leaders: &Option<&Vec<LeaderKeys>>) -> Result<()> {
     let var = std::env::var("BLZ_LEADER_STATE");
     debug!("Check leader keys: {leaders:?}");
     debug!("BLZ_LEADER_STATE = {var:?}");
 
+    let (which, to_run) = match *SHELL.lock().unwrap() {
+        Shell::Zsh => (".zshrc", "source ~/.zshrc"),
+        Shell::Nu => ("nu config", "source $nu.config-path"),
+    };
+
     match var {
         Ok(it) => {
             if it != leaders_to_state(leaders) {
                 anyhow::bail!(
-                    "\nThe .zshrc needs to be sourced since the leader keys have changed since BLZ was last initialised. \nPlease run 'source ~/.zshrc'."
+                    "\nThe {which} needs to be sourced since the leader keys have changed since BLZ was last initialised. \nPlease run '{to_run}'."
                 )
             } else {
                 Ok(())
@@ -63,10 +70,14 @@ pub fn check_leaders(leaders: &Option<&Vec<LeaderKeys>>) -> Result<()> {
         }
         Err(_) => {
             anyhow::bail!(
-                "The 'BLZ_LEADER_STATE' should have been set in the .zshrc. Please run `source ~/.zshrc`."
+                "The 'BLZ_LEADER_STATE' should have been set in the {which}. Please run `{to_run}`."
             )
         }
     }
+}
+
+pub fn print_leader_state(leaders: &Option<&Vec<LeaderKeys>>) {
+    println!("{}", leaders_to_state(leaders));
 }
 
 pub fn print_export_leaders(leaders: &Option<&Vec<LeaderKeys>>) {

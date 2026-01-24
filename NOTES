@@ -2,6 +2,17 @@
 
 config file at: ~/.config/nushell/config.nu
 
+## Config requirements
+
+Must add: 
+
+```
+$env.BLZ_SHELL = "nu"
+$env.BLZ_LEADER_STATE = (blz --porcelain-print-leader-state)
+$env.config.hooks.pre_execution = $env.config.hooks.pre_execution | append { blz --porcelain-check-leader-state-then-exit }
+# TODO: also source a generated file.
+```
+
 ## leader keys
 
 A leader trigger looks like:

@@ -4,12 +4,8 @@ use crate::{
 };
 use anyhow::Result;
 
-use crate::zsh_hook;
-
 pub fn print_nu_hook(global: &Option<GlobalConfig>) -> Result<()> {
     if let Some(g) = global.as_ref().and_then(|g| g.global.as_ref()) {
-        // zsh_hook::print_export_leaders(&g.leader_keys.as_ref());
-
         if let Some(ref leaders) = g.leader_keys {
             if !leaders.is_empty() {
                 println!(
@@ -61,8 +57,6 @@ $env.config.keybindings ++= [
             }
         }
         println!("##### blaze-keys: end");
-    } else {
-        zsh_hook::print_export_leaders(&None);
     }
 
     Ok(())
