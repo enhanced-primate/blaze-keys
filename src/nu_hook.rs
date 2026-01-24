@@ -21,7 +21,10 @@ fn write_to_file(content: &str) -> anyhow::Result<()> {
     debug!("Writing {content:?} to {f:?}");
 
     write!(&mut f, "{}", content)
-        .context("Failed to generate nu file which contains keybindings for leader keys")
+        .context("Failed to generate nu file which contains keybindings for leader keys")?;
+
+    f.flush()?;
+    Ok(())
 }
 
 /// Generate the file containing the code which adds the nushell keybindings to trigger leader keys.

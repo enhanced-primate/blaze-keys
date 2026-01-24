@@ -2,7 +2,7 @@ use anyhow::Result;
 use log::debug;
 
 use crate::{
-    SHELL, Shell,
+    SHELL, Shell, is_nushell,
     keys::{self, KeyOrLeader},
     yml::{GlobalConfig, LeaderKeys},
 };
@@ -53,24 +53,35 @@ pub fn check_leaders(leaders: &Option<&Vec<LeaderKeys>>) -> Result<()> {
     debug!("Check leader keys: {leaders:?}");
     debug!("BLZ_LEADER_STATE = {var:?}");
 
-    let (which, to_run) = match *SHELL.lock().unwrap() {
-        Shell::Zsh => (".zshrc", "source ~/.zshrc"),
-        Shell::Nu => ("nu config", "source $nu.config-path"),
+    let shell = *SHELL.lock().unwrap();
+
+    let (which, _or) = match shell {
+        Shell::Zsh => (".zshrc", ", or run 'source ~/.zshrc'"),
+        Shell::Nu => ("nu config", ""),
     };
 
     match var {
         Ok(it) => {
             if it != leaders_to_state(leaders) {
-                anyhow::bail!(
-                    "\nThe {which} needs to be sourced since the leader keys have changed since BLZ was last initialised. \nPlease run '{to_run}'."
-                )
+                // nushell doesn't make it so easy to refresh the environment, so we'll allow an
+                // override to quiet this message.
+                if is_nushell() && std::env::var("BLZ_STFU").is_ok_and(|it| it != "false") {
+                    return Ok(());
+                }
+
+                anyhow::bail!(match shell {
+                    Shell::Zsh =>
+                        "The '.zshrc' needs to be sourced since the leader keys have changed since BLZ was last initialised. \nPlease run 'source ~/.zshrc'.",
+                    Shell::Nu =>
+                        "The nu session needs to be updated since the BLZ leader keys have changed. This requires opening a new shell with a new environment; sourcing the config and 'exec nu' won't work, but you can open a new terminal tab. \nTip: Use '$env.BLZ_STFU = true' in the current session to quiet this message.",
+                })
             } else {
                 Ok(())
             }
         }
         Err(_) => {
             anyhow::bail!(
-                "The 'BLZ_LEADER_STATE' should have been set in the {which}. Please run `{to_run}`."
+                "The 'BLZ_LEADER_STATE' should have been set in the {which}. Please open a new shell{_or}."
             )
         }
     }

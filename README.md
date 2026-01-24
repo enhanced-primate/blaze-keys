@@ -68,9 +68,13 @@ cargo install --locked --bin blz blaze-keys
 
 Run `blz -g` to edit the global config (creating from template if not present). The repo includes an example which demonstrates many of the available features: [global.all.yml](./example-configs/templates/global.all.yml). I would suggest that you use the `all` config when prompted, then follow the [tutorial](./docs/tutorial.md) to familiarise yourself with the usage; then you can modify the config as you wish.  
 
-> **Warning**: After adding a new leader key to the global config, you need to source your config (`~/.zshrc` or `$nu.config-path`) for the new keybinds to take effect.
+> **Warning**: After adding a new leader key to the global config, you need to source your config (in Zsh) or open a new shell for the new keybinds to take effect.
+
+---
 
 ### Configure shell integration
+
+> ⚠️ **macOS users**: You will need to configure your terminal emulator to use the `Option` key as `Alt`. Please see the [macOS terminal setup guide](./docs/macos_terminal_setup.md) for more information.
 
 #### Zsh - Update .zshrc
 
@@ -81,31 +85,31 @@ echo 'source <(blz --zsh-hook)' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-> ⚠️ **macOS users**: You will need to configure your terminal emulator to use the `Option` key as `Alt`. Please see the [macOS terminal setup guide](./docs/macos_terminal_setup.md) for more information.
-
 #### Nushell - Update nu config
 
-If using `nushell`, run `config nu` to edit the config and paste in the following block:
+If using `nushell`, first you need to generate the file which will hold the leader-key keybindings:
 
-```nu
+```nushell
+blz --porcelain-generate-nu-source
+```
+
+Then run `config nu` to edit the config, and paste in the following block:
+
+```nushell
 ### blaze-keys: start
 blz --porcelain-generate-nu-source
 source ~/.config/blaze-keys/.leader_keys.nu
 $env.BLZ_SHELL = "nu"
 $env.BLZ_LEADER_STATE = (blz --porcelain-print-leader-state)
 $env.config.hooks.pre_execution = $env.config.hooks.pre_execution | append { ||
-  if ((commandline) | str contains "source") {} else {
+  if ((commandline) | str contains "source") {} else if ((commandline) | str contains "env.BLZ") {} else {
     blz --porcelain-check-leader-state-then-exit
   }
 }
 ### blaze-keys: end
 ```
 
-Then source it:
-
-```nu
-source $nu.config-path
-```
+Then open a new shell.
 
 ---
 

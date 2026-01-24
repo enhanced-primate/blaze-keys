@@ -18,7 +18,7 @@ pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
         .into()
 });
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Copy, Clone)]
 pub enum Shell {
     Zsh,
     Nu,
