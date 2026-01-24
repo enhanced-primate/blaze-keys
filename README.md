@@ -31,6 +31,7 @@ For example, maybe you want to be able to use `Shift+Alt+B` to run `cargo build`
 - [ ] Improve macOS support (please see the [issue](/../../issues/1)). 
   - It should work fine on macOS (it has been tested briefly), but I'm in no position to guarantee this - especially for different terminal emulators. 
 - [ ] Support other shells, such as `fish` (please upvote the [issue](/../../issues/3) if you're interested).
+  - [x] Preliminary support for `nushell` added. 
 
 ## Try it out with Docker?
 
@@ -63,9 +64,17 @@ You can alternatively install with `cargo` (Rust `1.88` or newer):
 cargo install --locked --bin blz blaze-keys
 ```
 
-### Update .zshrc
+### Configure global config
 
-Add a line to your `.zshrc` file and source it:
+Run `blz -g` to edit the global config (creating from template if not present). The repo includes an example which demonstrates many of the available features: [global.all.yml](./example-configs/templates/global.all.yml). I would suggest that you use the `all` config when prompted, then follow the [tutorial](./docs/tutorial.md) to familiarise yourself with the usage; then you can modify the config as you wish.  
+
+> **Warning**: After adding a new leader key to the global config, you need to source your config (`~/.zshrc` or `$nu.config-path`) for the new keybinds to take effect.
+
+### Configure shell integration
+
+#### Zsh - Update .zshrc
+
+For Zsh, add a line to your `.zshrc` file and source it:
 
 ```bash
 echo 'source <(blz --zsh-hook)' >> ~/.zshrc
@@ -74,11 +83,31 @@ source ~/.zshrc
 
 > ⚠️ **macOS users**: You will need to configure your terminal emulator to use the `Option` key as `Alt`. Please see the [macOS terminal setup guide](./docs/macos_terminal_setup.md) for more information.
 
-### Configure global config
+#### Nushell - Update nu config
 
-Run `blz -g` to edit the global config (creating from template if not present). The repo includes an example which demonstrates many of the available features: [global.all.yml](./example-configs/templates/global.all.yml). I would suggest that you use the `all` config when prompted, then follow the [tutorial](./docs/tutorial.md) to familiarise yourself with the usage; then you can modify the config as you wish.  
+If using `nushell`, run `config nu` to edit the config and paste in the following block:
 
-> **Warning**: After adding a new leader key to the global config, you need to `source ~/.zshrc` for the new keybinds to take effect.
+```nu
+### blaze-keys: start
+blz --porcelain-generate-nu-source
+source ~/.config/blaze-keys/.leader_keys.nu
+$env.BLZ_SHELL = "nu"
+$env.BLZ_LEADER_STATE = (blz --porcelain-print-leader-state)
+$env.config.hooks.pre_execution = $env.config.hooks.pre_execution | append { ||
+  if ((commandline) | str contains "source") {} else {
+    blz --porcelain-check-leader-state-then-exit
+  }
+}
+### blaze-keys: end
+```
+
+Then source it:
+
+```nu
+source $nu.config-path
+```
+
+---
 
 ### Configure local config
 
@@ -104,6 +133,8 @@ keybinds:
     command: "cargo run"
 
 ```
+
+---
 
 ### FAQs
 
