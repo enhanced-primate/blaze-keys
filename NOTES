@@ -47,3 +47,25 @@ $env.config.hooks = {
 
 How do I make that update the $env in the current session? It seems like the env changes are scoped to the hook. 
 
+
+### Refactoring command args
+
+--porcelain-leader 
+--porcelain-ignore-leader-state
+--porcelain-print-leader-state
+--porcelain-check-leader-state-then-exit
+--porcelain-generate-nu-source
+--porcelain-print-nu-source-path
+--porcelain-tmp <PORCELAIN_TMP>
+--porcelain-abbr
+--porcelain-blat
+
+Now under porcelain:
+
+  leader-key
+  print-leader-state
+  check-leader-state-then-exit
+  generate-nu-source
+  print-nu-source-path
+  blat
+

@@ -9,7 +9,7 @@ use blaze_keys::keys::print_bindkey_zsh;
 use blaze_keys::yml::{self, GlobalConfig, LocalConfig};
 use blaze_keys::{CONFIG_FILE_NAME, keys::print_human_keys, nodes::Node, nu_hook, zsh_hook};
 use blaze_keys::{SHELL, Shell, keys};
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use colored::Colorize;
 use flexi_logger::{FileSpec, LoggerHandle};
 use log::{debug, info};
@@ -64,32 +64,6 @@ struct Args {
     )]
     zsh_hook: bool,
 
-    #[clap(short = 'L', long)]
-    porcelain_leader: Option<String>,
-
-    #[clap(long)]
-    porcelain_tmp: Option<String>,
-
-    #[clap(long)]
-    porcelain_abbr: bool,
-
-    #[clap(
-        short = 'B',
-        long,
-        action,
-        help = "Prints the Zsh keybind commands for the current working directory."
-    )]
-    porcelain_blat: bool,
-
-    #[clap(long)]
-    porcelain_ignore_leader_state: bool,
-
-    #[clap(long)]
-    porcelain_print_leader_state: bool,
-
-    #[clap(long)]
-    porcelain_check_leader_state_then_exit: bool,
-
     #[cfg(debug_assertions)]
     #[clap(short = 's', long, help = "[development] Swap a config in or out.")]
     swap_config: Option<String>,
@@ -101,17 +75,62 @@ struct Args {
     )]
     print_template: Option<Option<String>>,
 
-    #[clap(
-        long,
-        help = "Generate the source file with leader-key triggers for nushell"
-    )]
-    porcelain_generate_nu_source: bool,
+    #[clap(subcommand)]
+    porcelain: Option<PorcelainWrapper>,
+}
 
-    #[clap(
-        long,
-        help = "Print the path to the source file with leader-key triggers for nushell"
-    )]
-    porcelain_print_nu_source_path: bool,
+#[derive(Subcommand, Debug)]
+enum PorcelainWrapper {
+    Porcelain {
+        #[clap(subcommand)]
+        inner: Porcelain,
+
+        #[clap(short, long, help = "test")]
+        ignore_leader_state: bool,
+    },
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Subcommand, Debug)]
+enum Porcelain {
+    leader_key {
+        leader: String,
+
+        #[clap(long)]
+        tmpfile: String,
+
+        #[clap(long)]
+        abbr: bool,
+    },
+    print_leader_state,
+    check_leader_state_then_exit,
+    generate_nu_source,
+    print_nu_source_path,
+    blat,
+}
+
+macro_rules! porcelain_get {
+    ($args:tt, $which:pat => $then:expr) => {
+        $args
+            .porcelain
+            .as_ref()
+            .map(|it| match it {
+                PorcelainWrapper::Porcelain { inner, .. } => match inner {
+                    $which => Some($then),
+                    _ => None,
+                },
+            })
+            .flatten()
+    };
+}
+macro_rules! porcelain_set {
+    ($args:tt, $which:pat) => {
+        $args.porcelain.as_ref().is_some_and(|it| match it {
+            PorcelainWrapper::Porcelain { inner, .. } => {
+                matches!(inner, $which)
+            }
+        })
+    };
 }
 
 fn parse_global_keybinds<T>(path: T) -> Option<Result<GlobalConfig>>
@@ -253,7 +272,7 @@ fn main() -> Result<(), anyhow::Error> {
 
     let args = Args::parse();
 
-    if args.porcelain_print_nu_source_path {
+    if porcelain_set!(args, Porcelain::print_nu_source_path) {
         println!("{}", nu_hook::nu_source_location());
         return Ok(());
     }
@@ -298,7 +317,7 @@ fn main() -> Result<(), anyhow::Error> {
         zsh_hook::print_zsh_hook(&global_binds);
         return Ok(());
     }
-    if args.porcelain_generate_nu_source {
+    if porcelain_set!(args, Porcelain::generate_nu_source) {
         nu_hook::generate_nu_source(&global_binds)?;
         return Ok(());
     }
@@ -315,33 +334,38 @@ fn main() -> Result<(), anyhow::Error> {
         None => &None,
     };
 
-    if args.porcelain_print_leader_state {
+    if porcelain_set!(args, Porcelain::print_leader_state) {
         zsh_hook::print_leader_state(ld);
         return Ok(());
     }
-    if !args.porcelain_ignore_leader_state && args.porcelain_leader.is_none()
+
+    if !args.porcelain.as_ref().is_some_and(|it| match it {
+        PorcelainWrapper::Porcelain {
+            ignore_leader_state,
+            ..
+        } => *ignore_leader_state,
+    }) && !porcelain_set!(
+        args,
+        Porcelain::leader_key {
+            leader: _,
+            tmpfile: _,
+            abbr: _
+        }
+    )
     /* No need to check when the leader key is set, because that means this leader key is up to date at least */
     {
         zsh_hook::check_leaders(ld)?;
 
-        if args.porcelain_check_leader_state_then_exit {
+        if porcelain_set!(args, Porcelain::check_leader_state_then_exit) {
             return Ok(());
         }
     }
 
-    if let Some(leader) = args.porcelain_leader {
-        let leader_keys = Node::root(&global_binds, leader)?;
+    if let Some((leader, tmpfile, abbr)) = porcelain_get!(args, Porcelain::leader_key {leader, tmpfile, abbr} => (leader, tmpfile, abbr))
+    {
+        let leader_keys = Node::root(&global_binds, leader.to_owned())?;
 
-        let tmp = match &args.porcelain_tmp {
-            Some(t) => t,
-            None => {
-                anyhow::bail!(
-                    "'--porcelain-tmp' must be set to the path to a temporary file which is used to store the output"
-                )
-            }
-        };
-
-        leader_keys_tui(leader_keys, args.porcelain_abbr, tmp);
+        leader_keys_tui(leader_keys, *abbr, tmpfile);
         return Ok(());
     }
 
