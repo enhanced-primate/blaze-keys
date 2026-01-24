@@ -1,16 +1,42 @@
 use crate::{
+    CONFIG_DIR, NU_SOURCE_NAME,
     keys::{self, NuKey},
     yml::GlobalConfig,
 };
-use anyhow::Result;
+use anyhow::{Context, Result};
+use log::debug;
+use std::io::Write as write2;
+use std::{fmt::Write, fs::File};
 
-pub fn print_nu_hook(global: &Option<GlobalConfig>) -> Result<()> {
+pub fn nu_source_location() -> String {
+    CONFIG_DIR.join(NU_SOURCE_NAME).to_str().unwrap().into()
+}
+
+fn write_to_file(content: &str) -> anyhow::Result<()> {
+    if !CONFIG_DIR.exists() {
+        std::fs::create_dir_all(CONFIG_DIR.to_str().unwrap())?;
+    }
+    let mut f = File::create(nu_source_location())?;
+
+    debug!("Writing {content:?} to {f:?}");
+
+    write!(&mut f, "{}", content)
+        .context("Failed to generate nu file which contains keybindings for leader keys")
+}
+
+/// Generate the file containing the code which adds the nushell keybindings to trigger leader keys.
+pub fn generate_nu_source(global: &Option<GlobalConfig>) -> Result<()> {
+    let mut buffer = String::new();
+
     if let Some(g) = global.as_ref().and_then(|g| g.global.as_ref()) {
         if let Some(ref leaders) = g.leader_keys {
+            buffer.reserve(1000 * 2 * leaders.len());
+
             if !leaders.is_empty() {
-                println!(
+                writeln!(
+                    &mut buffer,
                     "##### blaze-keys: start\n##### The nu widgets which provide the leader key functionality."
-                );
+                )?;
             }
 
             for leader in leaders.iter() {
@@ -31,7 +57,7 @@ pub fn print_nu_hook(global: &Option<GlobalConfig>) -> Result<()> {
                         false => ("", "", "-A"),
                     };
 
-                    println!(
+                    writeln!(&mut buffer,
                         "
 $env.config.keybindings ++= [
     {{
@@ -52,12 +78,12 @@ $env.config.keybindings ++= [
                         char,
                         spacing,
                         flag,
-                    )
+                    )?;
                 }
             }
         }
-        println!("##### blaze-keys: end");
+        writeln!(&mut buffer, "##### blaze-keys: end")?;
     }
 
-    Ok(())
+    write_to_file(&buffer)
 }

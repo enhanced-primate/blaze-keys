@@ -140,6 +140,10 @@ You can run `blz -B` to see the raw `bindkey` commands which are being executed,
 
 If your TUI is not appearing when triggering a leader key, check for a `.panic.blz` file in the current working directory.
 
+##### Logs 
+
+If you need to view blz logs, you can export `BLZ_LOG=debug` and view the log file at `/tmp/blz.log`.
+
 #### What are the security risks?
 
 It's possible for another process to inject into the command which is completed with `blz`, if specifically engineered to do so. However, this is no greater risk than that of a program overwriting your `~/.zshrc` to reassign some aliases to malicious commands.

@@ -1,4 +1,6 @@
-use std::sync::Mutex;
+use std::{path::PathBuf, sync::Mutex};
+
+use once_cell::sync::Lazy;
 
 pub mod keys;
 pub mod nodes;
@@ -8,6 +10,13 @@ pub mod yml;
 pub mod zsh_hook;
 
 pub const CONFIG_FILE_NAME: &str = ".blz.yml";
+pub const NU_SOURCE_NAME: &str = ".leader_keys.nu";
+
+pub static CONFIG_DIR: Lazy<PathBuf> = Lazy::new(|| {
+    shellexpand::tilde("~/.config/blaze-keys")
+        .to_string()
+        .into()
+});
 
 #[derive(PartialEq)]
 pub enum Shell {

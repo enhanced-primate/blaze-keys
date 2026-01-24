@@ -4,6 +4,7 @@ mod dev;
 extern crate termion;
 
 use anyhow::{Result, anyhow};
+use blaze_keys::CONFIG_DIR;
 use blaze_keys::keys::print_bindkey_zsh;
 use blaze_keys::yml::{self, GlobalConfig, LocalConfig};
 use blaze_keys::{CONFIG_FILE_NAME, keys::print_human_keys, nodes::Node, nu_hook, zsh_hook};
@@ -100,8 +101,17 @@ struct Args {
     )]
     print_template: Option<Option<String>>,
 
-    #[clap(short, long, help = "Print the Nushell bindings.")]
-    nu_hook: bool,
+    #[clap(
+        long,
+        help = "Generate the source file with leader-key triggers for nushell"
+    )]
+    porcelain_generate_nu_source: bool,
+
+    #[clap(
+        long,
+        help = "Print the path to the source file with leader-key triggers for nushell"
+    )]
+    porcelain_print_nu_source_path: bool,
 }
 
 fn parse_global_keybinds<T>(path: T) -> Option<Result<GlobalConfig>>
@@ -242,11 +252,15 @@ fn main() -> Result<(), anyhow::Error> {
     debug!("Executed in {:?}", std::env::current_dir().unwrap());
 
     let args = Args::parse();
-    let config_dir = shellexpand::tilde("~/.config/blaze-keys").to_string();
+
+    if args.porcelain_print_nu_source_path {
+        println!("{}", nu_hook::nu_source_location());
+        return Ok(());
+    }
 
     #[cfg(debug_assertions)]
     if let Some(name) = args.swap_config {
-        dev::swap_config(&name, &config_dir)?;
+        dev::swap_config(&name, CONFIG_DIR.to_str().unwrap())?;
         return Ok(());
     }
 
@@ -260,10 +274,10 @@ fn main() -> Result<(), anyhow::Error> {
         return Ok(());
     }
 
-    let config_file = PathBuf::from(&config_dir).join(CONFIG_FILE_NAME);
+    let config_file = CONFIG_DIR.join(CONFIG_FILE_NAME);
 
     if args.edit_global_config {
-        edit_config_file(&config_dir, &config_file)?;
+        edit_config_file(CONFIG_DIR.to_str().unwrap(), &config_file)?;
     }
     if args.edit_local_config {
         let path = PathBuf::from(CONFIG_FILE_NAME);
@@ -278,14 +292,14 @@ fn main() -> Result<(), anyhow::Error> {
         );
         edit_config_file(".", &path)?;
     }
-    let global_binds = parse_global_keybinds(&config_file);
+    let global_binds = parse_global_keybinds(&config_file).transpose()?;
 
     if args.zsh_hook {
-        zsh_hook::print_zsh_hook(&global_binds.transpose()?);
+        zsh_hook::print_zsh_hook(&global_binds);
         return Ok(());
     }
-    if args.nu_hook {
-        nu_hook::print_nu_hook(&global_binds.transpose()?)?;
+    if args.porcelain_generate_nu_source {
+        nu_hook::generate_nu_source(&global_binds)?;
         return Ok(());
     }
     let local_binds = parse_local_keybinds();
@@ -293,9 +307,7 @@ fn main() -> Result<(), anyhow::Error> {
     debug!("Global keybinds: {global_binds:?}");
     debug!("Loaded local keybinds: {local_binds:?}");
 
-    let transposed_global_config = global_binds.transpose()?;
-
-    let ld = match &transposed_global_config {
+    let ld = match &global_binds {
         Some(i) => match i.global {
             Some(ref i) => &i.leader_keys.as_ref(),
             _ => &None,
@@ -318,7 +330,7 @@ fn main() -> Result<(), anyhow::Error> {
     }
 
     if let Some(leader) = args.porcelain_leader {
-        let leader_keys = Node::root(&transposed_global_config, leader)?;
+        let leader_keys = Node::root(&global_binds, leader)?;
 
         let tmp = match &args.porcelain_tmp {
             Some(t) => t,
@@ -339,7 +351,7 @@ fn main() -> Result<(), anyhow::Error> {
         print_bindkey_zsh
     };
 
-    if let Some(ref global_binds) = transposed_global_config {
+    if let Some(ref global_binds) = global_binds {
         global_binds.emit(&emitter)?;
     }
 
@@ -347,7 +359,7 @@ fn main() -> Result<(), anyhow::Error> {
         let binds = binds?;
 
         if let Some(inherits_profiles) = binds.inherits {
-            let profiles = transposed_global_config
+            let profiles = global_binds
                 .ok_or_else(|| anyhow!("Error: can only use 'inherits' in local config if profiles are defined in global.blz.yml, but the latter seems to be absent"))?
                 .profiles
                 .ok_or_else(|| anyhow!("Error: can only use 'inherits' in local config if profiles are defined in global.blz.yml, but profiles seem to be absent in the latter"))?;
