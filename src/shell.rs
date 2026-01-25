@@ -16,9 +16,12 @@ pub fn leaders_to_state(leaders: &Option<&Vec<LeaderKeys>>) -> String {
             let mut out = vec![];
 
             for leader in l {
-                out.push(leader.sanitized_name());
-                out.push(leader.exec_mode.clone());
-                out.push(leader.abbr_mode.clone());
+                out.push(format!(
+                    "{}_e{}_a{}",
+                    leader.sanitized_name(),
+                    leader.exec_mode,
+                    leader.abbr_mode,
+                ));
             }
 
             out.sort();
