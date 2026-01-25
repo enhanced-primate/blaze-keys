@@ -1,3 +1,7 @@
+mod cli;
+mod configs;
+mod panic;
+
 #[cfg(debug_assertions)]
 mod dev;
 
@@ -5,191 +9,22 @@ extern crate termion;
 
 use anyhow::{Result, anyhow};
 use blaze_keys::keys::print_bindkey_zsh;
-use blaze_keys::yml::{self, GlobalConfig, LocalConfig};
+use blaze_keys::yml::{self};
 use blaze_keys::{CONFIG_DIR, shell};
 use blaze_keys::{
     CONFIG_FILE_NAME, keys::print_human_keys, nodes::Node, shell::nu_hook, shell::zsh_hook,
 };
 use blaze_keys::{SHELL, Shell, keys};
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use colored::Colorize;
 use flexi_logger::{FileSpec, LoggerHandle};
-use log::{debug, info};
-use std::path::{Path, PathBuf};
-use std::{
-    env,
-    fs::File,
-    io::{Write, stdin},
-    process::{Command, Stdio},
-    time::Duration,
-};
+use log::debug;
+use std::io::stdin;
+use std::path::PathBuf;
 use termion::raw::IntoRawMode;
 use termion::screen::IntoAlternateScreen;
 
-const LOCAL_TEMPLATE: &str = include_str!("../example-configs/templates/local.yml");
-const GLOBAL_TEMPLATE: &str = include_str!("../example-configs/templates/global.all.yml");
-const GLOBAL_TEMPLATE_SMALL: &str = include_str!("../example-configs/templates/global.small.yml");
-const GLOBAL_TEMPLATE_MINIMAL: &str =
-    include_str!("../example-configs/templates/global.minimal.yml");
-
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
-#[command(version = env!("CARGO_PKG_VERSION"))]
-#[command(arg_required_else_help = true)]
-#[command(about = "Keybind and leader-key manager for blazing fast commands in Zsh.", long_about = None)]
-struct Args {
-    #[clap(
-        short = 'g',
-        long,
-        help = "Edit the global config, creating from template if necessary."
-    )]
-    edit_global_config: bool,
-
-    #[clap(
-        short = 'l',
-        long,
-        help = "Edit a local config, creating from template if necessary."
-    )]
-    edit_local_config: bool,
-
-    #[clap(
-        short = 'v',
-        long,
-        help = "Show the keybinds for the current working directory."
-    )]
-    show_keybinds: bool,
-
-    #[clap(
-        short,
-        long,
-        help = "Print the Zsh bindings (this should be used in your ~/.zshrc)."
-    )]
-    zsh_hook: bool,
-
-    #[cfg(debug_assertions)]
-    #[clap(short = 's', long, help = "[development] Swap a config in or out.")]
-    swap_config: Option<String>,
-
-    #[clap(
-        short = 'p',
-        long,
-        help = "Print a template to stdout. Interactively select if no name is provided."
-    )]
-    print_template: Option<Option<String>>,
-
-    #[clap(subcommand)]
-    porcelain: Option<PorcelainWrapper>,
-}
-
-#[derive(Subcommand, Debug)]
-enum PorcelainWrapper {
-    Porcelain {
-        #[clap(subcommand)]
-        inner: Porcelain,
-
-        #[clap(short, long, help = "Ignore when the leader-key state does not match.")]
-        ignore_leader_state: bool,
-    },
-}
-
-#[allow(non_camel_case_types)]
-#[derive(Subcommand, Debug)]
-enum Porcelain {
-    #[clap(about = "Triggers the TUI with a given leader key.")]
-    leader_key {
-        leader: String,
-
-        #[clap(long)]
-        tmpfile: String,
-
-        #[clap(long)]
-        abbr: bool,
-    },
-    #[clap(about = "Prints the state of the leader keys.")]
-    print_leader_state,
-    #[clap(about = "Check the state of the leader keys and exit.")]
-    check_leader_state,
-    #[clap(about = "Generate the nu sources which are used to bind leader-keys to trigger keys.")]
-    generate_nu_source,
-    #[clap(about = "Print the path to the nu sources file.")]
-    print_nu_source_path,
-    #[clap(about = "Emit top-level keybinds.")]
-    blat,
-}
-
-macro_rules! porcelain_get {
-    ($args:tt, $which:pat => $then:expr) => {
-        $args
-            .porcelain
-            .as_ref()
-            .map(|it| match it {
-                PorcelainWrapper::Porcelain { inner, .. } => match inner {
-                    $which => Some($then),
-                    _ => None,
-                },
-            })
-            .flatten()
-    };
-}
-macro_rules! porcelain_set {
-    ($args:tt, $which:pat) => {
-        $args.porcelain.as_ref().is_some_and(|it| match it {
-            PorcelainWrapper::Porcelain { inner, .. } => {
-                matches!(inner, $which)
-            }
-        })
-    };
-}
-
-fn parse_global_keybinds<T>(path: T) -> Option<Result<GlobalConfig>>
-where
-    T: AsRef<Path>,
-{
-    let path = path.as_ref();
-
-    if !PathBuf::from(path).exists() {
-        info!("Keybinds global file not found: {}", path.display());
-        return None;
-    }
-
-    if let Ok(c) = std::fs::read_to_string(path) {
-        match serde_yml::from_str(&c) {
-            Ok(init_conf) => Some(Ok(init_conf)),
-            Err(e) => Some(Err(anyhow::Error::from(e))),
-        }
-    } else {
-        Some(Err(anyhow::anyhow!("Failed to read global config file")))
-    }
-}
-
-/// Parses the keybinds from the '.blz.yml' file.
-///
-/// Returns None if the file is absent.
-fn parse_local_keybinds() -> Option<Result<LocalConfig>> {
-    let fname = CONFIG_FILE_NAME;
-
-    let filename = PathBuf::from(fname);
-
-    if !filename.exists() {
-        return None;
-    }
-
-    info!("Read file: {filename:?}");
-
-    let content = match std::fs::read_to_string(&filename) {
-        Ok(c) => c,
-        Err(e) => {
-            return Some(Err(anyhow!(
-                "Failed to read config file={filename:?}: {e:?}"
-            )));
-        }
-    };
-
-    Some(
-        serde_yml::from_str(&content)
-            .map_err(|e| anyhow!("Failed to parse config from file={filename:?}; {e:?}")),
-    )
-}
+use crate::cli::{Args, Porcelain, PorcelainWrapper};
 
 fn setup_logging() -> Option<LoggerHandle> {
     if let Ok(blz_log) = std::env::var("BLZ_LOG") {
@@ -246,41 +81,19 @@ fn main() -> Result<(), anyhow::Error> {
     let _logger = setup_logging();
     check_root();
 
+    panic::register_hook();
+
     if let Ok(shell) = std::env::var("BLZ_SHELL")
         && shell.starts_with("nu")
     {
         *SHELL.lock().unwrap() = Shell::Nu;
     }
 
-    let hook = std::panic::take_hook();
-    // If we panic during the TUI render, the message may be invisible to the user.
-    // We write the error to a file instead.
-    std::panic::set_hook(Box::new(move |info| {
-        let location = info.location().unwrap();
-        let message = info.payload().downcast_ref::<&str>();
-
-        let out = if let Some(message) = message {
-            &format!("Message: {}", message)
-        } else {
-            "Panic occurred without a message."
-        };
-
-        let mut file = File::create(".panic.blz").unwrap();
-        write!(
-            file,
-            "A panic occurred in blz: \n{out:?}\nlocation: {location:?}"
-        )
-        .unwrap();
-
-        eprintln!("Panicked! (location={location}) \nmessage={message:?}");
-        hook(info);
-    }));
-
     debug!("Executed in {:?}", std::env::current_dir().unwrap());
 
     let args = Args::parse();
 
-    if porcelain_set!(args, Porcelain::print_nu_source_path) {
+    if porcelain_get_bool!(args, Porcelain::print_nu_source_path) {
         println!("{}", nu_hook::nu_source_location());
         return Ok(());
     }
@@ -293,9 +106,11 @@ fn main() -> Result<(), anyhow::Error> {
 
     if let Some(template_option) = args.print_template {
         let template = match template_option {
-            Some(template_name) => get_template_by_name(&template_name)
+            Some(template_name) => configs::get_template_by_name(&template_name)
                 .ok_or_else(|| anyhow!("Invalid template name: {}", template_name))?,
-            None => select_template_interactive("A template will be printed to standard output")?,
+            None => configs::select_template_interactive(
+                "A template will be printed to standard output",
+            )?,
         };
         println!("{template}");
         return Ok(());
@@ -304,12 +119,12 @@ fn main() -> Result<(), anyhow::Error> {
     let config_file = CONFIG_DIR.join(CONFIG_FILE_NAME);
 
     if args.edit_global_config {
-        edit_config_file(CONFIG_DIR.to_str().unwrap(), &config_file)?;
+        configs::edit_config_file(CONFIG_DIR.to_str().unwrap(), &config_file)?;
     }
     if args.edit_local_config {
         let path = PathBuf::from(CONFIG_FILE_NAME);
         if !path.exists() {
-            std::fs::write(&path, LOCAL_TEMPLATE)?;
+            std::fs::write(&path, configs::LOCAL_TEMPLATE)?;
         }
         println!("Created {path:?}.");
         println!(
@@ -317,19 +132,19 @@ fn main() -> Result<(), anyhow::Error> {
             "ATTENTION".on_cyan(),
             ": You will need to run 'cd .' to refresh the local keybinds.".bright_red()
         );
-        edit_config_file(".", &path)?;
+        configs::edit_config_file(".", &path)?;
     }
-    let global_binds = parse_global_keybinds(&config_file).transpose()?;
+    let global_binds = configs::parse_global_keybinds(&config_file).transpose()?;
 
     if args.zsh_hook {
         zsh_hook::print_zsh_hook(&global_binds);
         return Ok(());
     }
-    if porcelain_set!(args, Porcelain::generate_nu_source) {
+    if porcelain_get_bool!(args, Porcelain::generate_nu_source) {
         nu_hook::generate_nu_source(&global_binds)?;
         return Ok(());
     }
-    let local_binds = parse_local_keybinds();
+    let local_binds = configs::parse_local_keybinds();
 
     debug!("Global keybinds: {global_binds:?}");
     debug!("Loaded local keybinds: {local_binds:?}");
@@ -342,7 +157,7 @@ fn main() -> Result<(), anyhow::Error> {
         None => &None,
     };
 
-    if porcelain_set!(args, Porcelain::print_leader_state) {
+    if porcelain_get_bool!(args, Porcelain::print_leader_state) {
         shell::print_leader_state(ld);
         return Ok(());
     }
@@ -352,7 +167,7 @@ fn main() -> Result<(), anyhow::Error> {
             ignore_leader_state,
             ..
         } => *ignore_leader_state,
-    }) && !porcelain_set!(
+    }) && !porcelain_get_bool!(
         args,
         Porcelain::leader_key {
             leader: _,
@@ -364,7 +179,7 @@ fn main() -> Result<(), anyhow::Error> {
     {
         shell::check_leaders(ld)?;
 
-        if porcelain_set!(args, Porcelain::check_leader_state) {
+        if porcelain_get_bool!(args, Porcelain::check_leader_state) {
             return Ok(());
         }
     }
@@ -420,104 +235,4 @@ fn main() -> Result<(), anyhow::Error> {
     }
 
     Ok(())
-}
-
-fn get_template_by_name(name: &str) -> Option<&'static str> {
-    match name {
-        "all" | "a" => Some(GLOBAL_TEMPLATE),
-        "small" | "s" => Some(GLOBAL_TEMPLATE_SMALL),
-        "minimal" | "m" => Some(GLOBAL_TEMPLATE_MINIMAL),
-        _ => None,
-    }
-}
-
-const TEMPLATE_OPTIONS: &str = "The following are available:
-[all]     --  Contains a large number of aliases which you can trim down and modify as you like (includes Git, Docker, Cargo etc).
-[small]   --  Contains a small number of aliases (mostly for Git). 
-[minimal] --  Contains a few commented-out examples, but no aliases by default. 
-Which would you like? [all (a), small (s), minimal (m)] --> ";
-
-fn select_template_interactive(intro: &str) -> Result<&'static str> {
-    let stdin = std::io::stdin();
-
-    let template = loop {
-        let mut line = String::new();
-
-        print!("{intro}. {TEMPLATE_OPTIONS}");
-
-        std::io::stdout().flush()?;
-        stdin.read_line(&mut line)?;
-
-        if let Some(template) = get_template_by_name(line.as_str().trim_end()) {
-            break template;
-        } else {
-            println!("Invalid input.");
-            continue;
-        }
-    };
-
-    Ok(template)
-}
-
-fn create_global_config_interactive(config_file: &PathBuf) -> Result<()> {
-    println!(
-        "{}: You can view the templates first by using Ctrl+C and then running 'blz --print-template'.",
-        "TIP".on_bright_cyan().bright_white()
-    );
-    let template =
-        select_template_interactive("The global config will be created from a template")?;
-
-    std::fs::write(config_file, template)?;
-    println!("Created {config_file:?}.");
-
-    Ok(())
-}
-
-fn edit_config_file(config_dir: &str, config_file: &PathBuf) -> Result<()> {
-    std::fs::create_dir_all(config_dir)?;
-
-    if !config_file.exists() {
-        create_global_config_interactive(config_file)?;
-        std::thread::sleep(Duration::from_millis(750));
-    }
-
-    let editor = env::var("EDITOR")
-        .or_else(|_| env::var("VISUAL"))
-        .unwrap_or_else(|_| {
-            let editor = find_program(&["nvim", "code", "emacs", "zed", "vim", "nano", "vi"])
-                .expect("Failed to find an editor! Export the 'EDITOR' env variable.");
-
-            println!(
-                "Looked for an editor and chose {editor:?}. You can override by exporting the 'EDITOR' env variable."
-            );
-            editor
-        });
-
-    Command::new(editor)
-        .arg(config_file)
-        .stdin(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .spawn()?
-        .wait()?;
-
-    std::process::exit(0);
-}
-
-/// Used to find the optimal editor.
-fn find_program(programs: &[&str]) -> Option<String> {
-    for program in programs {
-        let output = Command::new("which").arg(program).output();
-
-        match output {
-            Ok(output) => {
-                if output.status.success() {
-                    return Some(program.to_string());
-                }
-            }
-            Err(_) => continue,
-        }
-    }
-
-    None
 }
