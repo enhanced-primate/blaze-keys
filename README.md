@@ -96,14 +96,14 @@ blz porcelain generate-nu-source
 Then run `config nu` to edit the shell config, and paste in the following block:
 
 ```nushell
-### blaze-keys: start
+### blaze-keys: start v1
 blz porcelain generate-nu-source
 source ~/.config/blaze-keys/.leader_keys.nu
 $env.BLZ_SHELL = "nu"
 $env.BLZ_LEADER_STATE = (blz porcelain print-leader-state)
 $env.config.hooks.pre_execution = $env.config.hooks.pre_execution | append { ||
   if ((commandline) | str contains "source") {} else if ((commandline) | str contains "env.BLZ") {} else {
-    blz porcelain check-leader-state-then-exit
+    blz porcelain check-leader-state
   }
 }
 ### blaze-keys: end

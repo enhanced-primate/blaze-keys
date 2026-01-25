@@ -106,7 +106,7 @@ enum Porcelain {
     #[clap(about = "Prints the state of the leader keys.")]
     print_leader_state,
     #[clap(about = "Check the state of the leader keys and exit.")]
-    check_leader_state_then_exit,
+    check_leader_state,
     #[clap(about = "Generate the nu sources which are used to bind leader-keys to trigger keys.")]
     generate_nu_source,
     #[clap(about = "Print the path to the nu sources file.")]
@@ -362,7 +362,7 @@ fn main() -> Result<(), anyhow::Error> {
     {
         zsh_hook::check_leaders(ld)?;
 
-        if porcelain_set!(args, Porcelain::check_leader_state_then_exit) {
+        if porcelain_set!(args, Porcelain::check_leader_state) {
             return Ok(());
         }
     }
