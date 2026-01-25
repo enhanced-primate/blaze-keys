@@ -2,6 +2,8 @@
 
 ***Blazing fast terminal commands with customizable leader-key combos and project-specific keybinds. For Zsh and Nushell.***
 
+*`nushell` support is limited to leader-key functionality at present.*
+
 ## Demo 
 
 [![demo](https://asciinema.org/a/6lKTjS45GDbXvirE89OSa5aDT.svg)](https://asciinema.org/a/6lKTjS45GDbXvirE89OSa5aDT?autoplay=1)
@@ -33,7 +35,7 @@ For example, maybe you want to be able to use `Shift+Alt+B` to run `cargo build`
 - [ ] Support other shells, such as `fish` (please upvote the [issue](/../../issues/3) if you're interested).
   - [x] Preliminary support for `nushell` added. **Limitations**: `blz` only supports leader keys in `nushell`; top-level keybinds are not yet supported. 
 
-## Try it out with Docker?
+### Try it out with Docker?
 
 You can try out `blaze-keys` without installing it, by using the [Docker image](./docs/docker.md). 
 
@@ -66,7 +68,7 @@ cargo install --locked --bin blz blaze-keys
 
 ### 2. Configure global config
 
-Run `blz -g` to edit the global config (creating from template if not present). The repo includes an example which demonstrates many of the available features: [global.all.yml](./example-configs/templates/global.all.yml). I would suggest that you use the `all` config when prompted, then follow the [tutorial](./docs/tutorial.md) to familiarise yourself with the usage; then you can modify the config as you wish.  
+Run `blz -g` to edit the global config (creating from template if not present). The repo includes an example which demonstrates many of the available features: [global.all.yml](./example-configs/templates/global.all.yml). I would suggest that you use the `all` config when prompted, then (after completing step 3 below) follow the [tutorial](./docs/tutorial.md) to familiarise yourself with the usage; then you can modify the config as you wish.  
 
 > **Warning**: After adding a new leader key to the global config, you need to source your config (in Zsh) or open a new shell for the new keybinds to take effect.
 
@@ -90,6 +92,7 @@ source ~/.zshrc
 If using [nushell](https://github.com/nushell/nushell), first you need to generate the file which will hold the leader-key keybindings:
 
 ```nushell
+# Important: Run manually before adding the block to the nu config.
 blz porcelain generate-nu-source
 ```
 
@@ -109,7 +112,7 @@ $env.config.hooks.pre_execution = $env.config.hooks.pre_execution | append { ||
 ### blaze-keys: end
 ```
 
-Then open a new shell. You may need to use a new terminal tab to ensure it doesn't inherit the environment from the first shell.
+Then open a new shell. You will need to use a new terminal tab/window to ensure it doesn't inherit the environment from the first shell.
 
 ---
 
@@ -141,6 +144,10 @@ keybinds:
 ---
 
 ### FAQs
+
+#### What features are supported in `nushell`?
+
+The leader-key functionality is supported in `nushell`, but top-level keybinds are not yet. 
 
 #### If I `cd` into a child directory, will my keybindings be unset?
 

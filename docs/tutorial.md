@@ -1,8 +1,8 @@
 # Tutorial 
 
-Before following this tutorial, follow the Quick Start steps in the main `README.md`, which will instruct you to download `blz`, modify the `~/.zshrc` and create the `all` config via `blz -g`. You can view/edit the global config by running `blz -g` at any point. 
+Before following this tutorial, follow the Quick Start steps in the main `README.md`, which will instruct you to download `blz`, modify the shell configuration (`~/.zshrc` or `config nu`) and create the `blz` config from the `all` template via `blz -g`. You can view/edit the global config by running `blz -g` at any point. 
 
-Don't forget to `source ~/.zshrc` after the last step.
+Don't forget to `source ~/.zshrc` after the last step, or open a new shell if using `nushell`.
 
 ## Leader keys
 
@@ -76,6 +76,8 @@ You should find that `git checkout origin/main` has been executed. You can also 
 ## Top-level keybinds 
 
 Top-level keybinds are hotkeys that you can press in the terminal, to execute a command. They can be set to change automatically as you move between projects. 
+
+> **Warning**: Top-level keybinds are not yet supported in `nushell`.
 
 Top-level keybinds can be defined in three places: 
 
