@@ -1,6 +1,6 @@
 # ⚡ blaze-keys
 
-***Blazing fast Zsh commands with customizable leader-key combos and project-specific keybinds.***
+***Blazing fast terminal commands with customizable leader-key combos and project-specific keybinds. For Zsh and Nushell.***
 
 ## Demo 
 
@@ -14,7 +14,7 @@ With `blaze-keys` you can:
 
 - Easily assign hotkeys to execute commands in Zsh, like setting `Alt+g` to run `git status`.
   - Define different hotkeys for different projects generically, which **automatically reassign** as you move between projects.
-- Define **leader key** combos which can:
+- Define **leader key** combos in Zsh/Nushell which can:
   - Execute commands with minimal key presses, and without leaving the home row - useful for commands like `git status` or `cargo build --release`.
   - Expand into the current line to allow you to add arguments - useful for commands like `git commit -am` or `git checkout -b`.
   - Run zsh builtins, like the useful `push-line`.
@@ -31,7 +31,7 @@ For example, maybe you want to be able to use `Shift+Alt+B` to run `cargo build`
 - [ ] Improve macOS support (please see the [issue](/../../issues/1)). 
   - It should work fine on macOS (it has been tested briefly), but I'm in no position to guarantee this - especially for different terminal emulators. 
 - [ ] Support other shells, such as `fish` (please upvote the [issue](/../../issues/3) if you're interested).
-  - [x] Preliminary support for `nushell` added. 
+  - [x] Preliminary support for `nushell` added. **Limitations**: `blz` only supports leader keys in `nushell`; top-level keybinds are not yet supported. 
 
 ## Try it out with Docker?
 
@@ -78,7 +78,7 @@ Run `blz -g` to edit the global config (creating from template if not present). 
 
 #### Zsh - Update .zshrc
 
-For Zsh, add a line to your `.zshrc` file and source it:
+For `zsh`, add a line to your `.zshrc` file and source it:
 
 ```bash
 echo 'source <(blz --zsh-hook)' >> ~/.zshrc
@@ -87,13 +87,13 @@ source ~/.zshrc
 
 #### Nushell - Update nu config
 
-If using `nushell`, first you need to generate the file which will hold the leader-key keybindings:
+If using [nushell](https://github.com/nushell/nushell), first you need to generate the file which will hold the leader-key keybindings:
 
 ```nushell
 blz porcelain generate-nu-source
 ```
 
-Then run `config nu` to edit the config, and paste in the following block:
+Then run `config nu` to edit the shell config, and paste in the following block:
 
 ```nushell
 ### blaze-keys: start
@@ -109,7 +109,7 @@ $env.config.hooks.pre_execution = $env.config.hooks.pre_execution | append { ||
 ### blaze-keys: end
 ```
 
-Then open a new shell.
+Then open a new shell. You may need to use a new terminal tab to ensure it doesn't inherit the environment from the first shell.
 
 ---
 
