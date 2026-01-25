@@ -4,10 +4,12 @@ mod dev;
 extern crate termion;
 
 use anyhow::{Result, anyhow};
-use blaze_keys::CONFIG_DIR;
 use blaze_keys::keys::print_bindkey_zsh;
 use blaze_keys::yml::{self, GlobalConfig, LocalConfig};
-use blaze_keys::{CONFIG_FILE_NAME, keys::print_human_keys, nodes::Node, nu_hook, zsh_hook};
+use blaze_keys::{CONFIG_DIR, shell};
+use blaze_keys::{
+    CONFIG_FILE_NAME, keys::print_human_keys, nodes::Node, shell::nu_hook, shell::zsh_hook,
+};
 use blaze_keys::{SHELL, Shell, keys};
 use clap::{Parser, Subcommand};
 use colored::Colorize;
@@ -341,7 +343,7 @@ fn main() -> Result<(), anyhow::Error> {
     };
 
     if porcelain_set!(args, Porcelain::print_leader_state) {
-        zsh_hook::print_leader_state(ld);
+        shell::print_leader_state(ld);
         return Ok(());
     }
 
@@ -360,7 +362,7 @@ fn main() -> Result<(), anyhow::Error> {
     )
     /* No need to check when the leader key is set, because that means this leader key is up to date at least */
     {
-        zsh_hook::check_leaders(ld)?;
+        shell::check_leaders(ld)?;
 
         if porcelain_set!(args, Porcelain::check_leader_state) {
             return Ok(());

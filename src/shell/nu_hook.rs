@@ -1,8 +1,8 @@
+use super::leaders_to_state;
 use crate::{
     CONFIG_DIR, NU_SOURCE_NAME,
     keys::{self, NuKey},
     yml::GlobalConfig,
-    zsh_hook::leaders_to_state,
 };
 use anyhow::{Context, Result};
 use log::debug;

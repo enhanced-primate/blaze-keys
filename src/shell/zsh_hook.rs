@@ -1,8 +1,4 @@
-use anyhow::Result;
-use log::debug;
-
 use crate::{
-    SHELL, Shell, is_nushell,
     keys::{self, KeyOrLeader},
     yml::{GlobalConfig, LeaderKeys},
 };
@@ -29,70 +25,11 @@ source <(blz porcelain --ignore-leader-state blat)
     );
 }
 
-pub fn leaders_to_state(leaders: &Option<&Vec<LeaderKeys>>) -> String {
-    leaders.map_or_else(
-        || "none".to_string(),
-        |l| {
-            let mut out = vec![];
-
-            for leader in l {
-                out.push(leader.sanitized_name());
-                out.push(leader.exec_mode.clone());
-                out.push(leader.abbr_mode.clone());
-            }
-
-            out.sort();
-            out.join("|")
-        },
-    )
-}
-
-/// Checks if the leader key state from the env is up to date. Returs an error if not.
-pub fn check_leaders(leaders: &Option<&Vec<LeaderKeys>>) -> Result<()> {
-    let var = std::env::var("BLZ_LEADER_STATE");
-    debug!("Check leader keys: {leaders:?}");
-    debug!("BLZ_LEADER_STATE = {var:?}");
-
-    let shell = *SHELL.lock().unwrap();
-
-    let (which, _or) = match shell {
-        Shell::Zsh => (".zshrc", ", or run 'source ~/.zshrc'"),
-        Shell::Nu => ("nu config", ""),
-    };
-
-    match var {
-        Ok(it) => {
-            if it != leaders_to_state(leaders) {
-                // nushell doesn't make it so easy to refresh the environment, so we'll allow an
-                // override to quiet this message.
-                if is_nushell() && std::env::var("BLZ_STFU").is_ok_and(|it| it != "false") {
-                    return Ok(());
-                }
-
-                anyhow::bail!(match shell {
-                    Shell::Zsh =>
-                        "The '.zshrc' needs to be sourced since the leader keys have changed since BLZ was last initialised. \nPlease run 'source ~/.zshrc'.",
-                    Shell::Nu =>
-                        "The nu session needs to be updated since the BLZ leader keys have changed. This requires opening a new shell with a new environment; sourcing the config and 'exec nu' won't work, but you can open a new terminal tab. \nTip: Use '$env.BLZ_STFU = true' in the current session to quiet this message.",
-                })
-            } else {
-                Ok(())
-            }
-        }
-        Err(_) => {
-            anyhow::bail!(
-                "The 'BLZ_LEADER_STATE' should have been set in the {which}. Please open a new shell{_or}."
-            )
-        }
-    }
-}
-
-pub fn print_leader_state(leaders: &Option<&Vec<LeaderKeys>>) {
-    println!("{}", leaders_to_state(leaders));
-}
-
 pub fn print_export_leaders(leaders: &Option<&Vec<LeaderKeys>>) {
-    println!("export BLZ_LEADER_STATE='{}'", leaders_to_state(leaders));
+    println!(
+        "export BLZ_LEADER_STATE='{}'",
+        super::leaders_to_state(leaders)
+    );
 }
 
 /// Prints the code required to integrate the program with Zsh.

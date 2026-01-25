@@ -4,10 +4,9 @@ use once_cell::sync::Lazy;
 
 pub mod keys;
 pub mod nodes;
-pub mod nu_hook;
+pub mod shell;
 pub mod tui;
 pub mod yml;
-pub mod zsh_hook;
 
 pub const CONFIG_FILE_NAME: &str = ".blz.yml";
 pub const NU_SOURCE_NAME: &str = ".leader_keys.nu";
