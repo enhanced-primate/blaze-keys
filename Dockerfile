@@ -15,6 +15,7 @@ RUN cargo build --release
 
 # Copy the Rust project files
 COPY src/* ./src/
+COPY src/shell/* ./src/shell/
 COPY src/bin/* ./src/bin/
 COPY example-configs ./example-configs
 
