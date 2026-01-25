@@ -56,7 +56,7 @@ pub fn generate_nu_source(global: &Option<GlobalConfig>) -> Result<()> {
                         Some(m) => m,
                     };
                     let (flag, spacing, accept_flag) = match abbr {
-                        true => ("--porcelain-abbr ", "commandline edit --insert ' ';", ""),
+                        true => ("--abbr ", "commandline edit --insert ' ';", ""),
                         false => ("", "", "-A"),
                     };
 
@@ -70,7 +70,7 @@ $env.config.keybindings ++= [
       mode: emacs
       event: {{
         send: executehostcommand,
-        cmd: \"let tmpfile = (mktemp -p /tmp); blz --porcelain-leader {0} {5} --porcelain-tmp $tmpfile; commandline edit {1} --insert (cat $tmpfile);{4} rm $tmpfile\"
+        cmd: \"let tmpfile = (mktemp -p /tmp); blz porcelain leader-key {0} {5} --tmpfile $tmpfile; commandline edit {1} --insert (cat $tmpfile);{4} rm $tmpfile\"
       }} 
     }}
 ]

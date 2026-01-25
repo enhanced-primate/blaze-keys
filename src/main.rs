@@ -85,7 +85,7 @@ enum PorcelainWrapper {
         #[clap(subcommand)]
         inner: Porcelain,
 
-        #[clap(short, long, help = "test")]
+        #[clap(short, long, help = "Ignore when the leader-key state does not match.")]
         ignore_leader_state: bool,
     },
 }
@@ -93,6 +93,7 @@ enum PorcelainWrapper {
 #[allow(non_camel_case_types)]
 #[derive(Subcommand, Debug)]
 enum Porcelain {
+    #[clap(about = "Triggers the TUI with a given leader key.")]
     leader_key {
         leader: String,
 
@@ -102,10 +103,15 @@ enum Porcelain {
         #[clap(long)]
         abbr: bool,
     },
+    #[clap(about = "Prints the state of the leader keys.")]
     print_leader_state,
+    #[clap(about = "Check the state of the leader keys and exit.")]
     check_leader_state_then_exit,
+    #[clap(about = "Generate the nu sources which are used to bind leader-keys to trigger keys.")]
     generate_nu_source,
+    #[clap(about = "Print the path to the nu sources file.")]
     print_nu_source_path,
+    #[clap(about = "Emit top-level keybinds.")]
     blat,
 }
 

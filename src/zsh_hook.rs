@@ -20,11 +20,11 @@ fn print_zsh_chpwd_hook() {
 autoload -U add-zsh-hook
 
 run_on_cd() {{
-    source <(blz --porcelain-blat)
+    source <(blz porcelain blat)
 }}
 
 add-zsh-hook chpwd run_on_cd
-source <(blz --porcelain-ignore-leader-state)
+source <(blz porcelain --ignore-leader-state blat)
 "
     );
 }
@@ -121,14 +121,14 @@ pub fn print_zsh_hook(global: &Option<GlobalConfig>) {
                         _ => panic!("invalid keybind for leader"),
                     };
                     let (flag, spacing, zle_accept) = match abbr {
-                        true => ("--porcelain-abbr ", " ", ""),
+                        true => ("--abbr ", " ", ""),
                         false => ("", "", "\n    zle accept-line"),
                     };
 
                     println!(
                         "function {} {{
   tmpfile=$(mktemp)
-  blz --porcelain-leader {} {}--porcelain-tmp $tmpfile < /dev/tty
+  blz porcelain leader-key {} {}--tmpfile $tmpfile < /dev/tty
   content=$(cat $tmpfile)
 
   if [[ $content =~ '^zle .*' ]]; then
